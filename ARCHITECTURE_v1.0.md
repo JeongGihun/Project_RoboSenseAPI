@@ -289,7 +289,23 @@ PostgreSQL에서는 인덱스명을 사용하지 않음. MySQL에서는 사용
 - 방법은 AWS Console or Docker Compose 사용
 ```
 
-## 기술 스택 (예상)
+## 파일 디렉터리 구조
+```
+robosense-api/
+├── app/
+│   ├── main.py
+│   ├── models/
+│   ├── routes/
+│   ├── schemas/
+│   └── utils/
+├── cpp_modules/      # C++ 최적화 모듈
+├── tests/
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
+```
+
+## 기술 스택 (예정)
 ### 백엔드
 - FastAPI : 비동기 처리(동시 요청 처리), 타입 힌트 지원, 대중적
 - Uvicorn : FastAPI를 실행시켜주는 ASGI 서버
