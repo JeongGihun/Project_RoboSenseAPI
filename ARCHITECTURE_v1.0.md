@@ -27,7 +27,7 @@ High-Performance Sensor Data Processing API for Robotics
 ## 시스템 아키텍쳐 다이어그램
 ![시스템 아키텍쳐 다이어그램](images/System_Architecture_Diagram.jpg)
 - FAST API 인스턴스 5개인 이유 -> 현재 로컬이 CPU 코어가 6개, 1개는 메인 시스템 운영용
-- 다만 인스턴스 갯수를 개발 중 : 5개 -> 정상 배포 확인 시 : 2개 -> 프로젝트 완료 직전 : 5개로 변경
+- 다만 인스턴스 갯수를 개발 중 : 5개 -> 정상 배포 확인 시 : 2개 -> 프로젝트 배포 시 : 25개로 변경
 - Redis 캐싱 : 로봇별 최근 10초간 데이터, 시간대별 통계
   * 로봇 상태 : TTL 10초시 효과 50ms -> 5ms 예상, 통계 데이터 : TTL 1분시 효과 500ms->5ms
   * 패턴 : Cache-Aside, 조회 시 캐시 확인 -> 없으면 DB -> 캐시 저장
