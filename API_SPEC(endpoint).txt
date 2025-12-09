@@ -1,0 +1,420 @@
+# RoboSense API 엔드포인트 명세서
+
+## 1. POST /api/sensors (센서 데이터 수집)
+
+### 요청
+```http
+POST /api/sensors
+Content-Type: application/json
+```
+```json
+{
+  "robot_id": 1,
+  "timestamp": "2024-12-06T10:30:00",
+  "sensors": [
+    {
+      "sensor_type": "IMU",
+      "data": {
+        "acceleration": {"x": 1.2, "y": -0.5, "z": 9.8},
+        "gyroscope": {"x": 0.1, "y": 0.2, "z": 0.3}
+      }
+    },
+    {
+      "sensor_type": "GPS",
+      "data": null
+    },
+    {
+      "sensor_type": "LiDAR",
+      "data": {
+        "distance": 3.5,
+        "angle": 45
+      }
+    }
+  ]
+}
+```
+
+**필수 필드:**
+- `robot_id` (integer) - 로봇 ID
+- `timestamp` (string, ISO 8601) - 센서 읽은 시간
+- `sensors` (array, 최소 1개) - 센서 데이터 배열
+- `sensors[].sensor_type` (enum: IMU, GPS, LiDAR) - 센서 종류
+
+**선택 필드:**
+- `sensors[].data` (JSONB, null 허용) - 센서 값
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "status": "success",
+  "inserted_count": 3,
+  "robot_id": 1
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid timestamp format | 시간 형식 오류 |
+| 400 | Sensors array cannot be empty | 빈 배열 |
+| 400 | Invalid sensor_type | 잘못된 센서 타입 |
+| 404 | Robot not found | robot_id 존재하지 않음 |
+| 500 | Internal server error | 서버 에러 |
+
+---
+
+## 2. GET /api/sensors (센서 데이터 조회)
+
+### 요청
+```http
+GET /api/sensors?robot_id=1&sensor_type=IMU&start_time=2024-12-06T10:00:00&end_time=2024-12-06T11:00:00&page=1&page_size=100
+```
+
+**쿼리 파라미터:**
+- `robot_id` (optional, integer) - 특정 로봇 필터링
+- `sensor_type` (optional, enum) - IMU/GPS/LiDAR 필터링
+- `start_time` (optional, ISO 8601) - 시작 시간
+- `end_time` (optional, ISO 8601) - 종료 시간
+- `page` (optional, integer, default: 1) - 페이지 번호
+- `page_size` (optional, integer, default: 100) - 페이지당 개수
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "robot_id": 1,
+      "sensor_type": "IMU",
+      "timestamp": "2024-12-06T10:00:00",
+      "raw_data": {
+        "acceleration": {"x": 1.2, "y": -0.5, "z": 9.8}
+      },
+      "created_at": "2024-12-06T10:00:01"
+    }
+  ],
+  "total": 1500,
+  "page": 1,
+  "page_size": 100
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid parameters | 파라미터 형식 오류 |
+
+---
+
+## 3. POST /api/robots (로봇 등록)
+
+### 요청
+```http
+POST /api/robots
+Content-Type: application/json
+```
+```json
+{
+  "name": "Robot-A",
+  "model": "Warehouse-Bot-v2",
+  "status": "active",
+  "battery_level": 100
+}
+```
+
+**필수 필드:**
+- `name` (string) - 로봇 이름
+- `model` (string) - 모델명
+- `status` (enum: active, inactive, maintenance) - 상태
+- `battery_level` (integer, 0-100) - 배터리 수준
+
+### 응답
+
+**성공 (201 Created)**
+```json
+{
+  "status": "success",
+  "robot": {
+    "id": 5,
+    "name": "Robot-A",
+    "model": "Warehouse-Bot-v2",
+    "status": "active",
+    "battery_level": 100,
+    "last_seen": null,
+    "created_at": "2024-12-06T10:00:00"
+  }
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid battery_level | 0-100 범위 벗어남 |
+| 400 | Invalid status | 잘못된 상태 값 |
+| 409 | Robot name already exists | 이름 중복 |
+
+---
+
+## 4. GET /api/robots (로봇 목록)
+
+### 요청
+```http
+GET /api/robots?status=active
+```
+
+**쿼리 파라미터:**
+- `status` (optional, enum) - active/inactive/maintenance 필터링
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "robots": [
+    {
+      "id": 1,
+      "name": "Robot-A",
+      "model": "Warehouse-Bot-v2",
+      "status": "active",
+      "battery_level": 80,
+      "last_seen": "2024-12-06T10:30:05",
+      "created_at": "2024-12-06T09:00:00"
+    }
+  ],
+  "total": 10
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid status | 잘못된 상태 값 |
+
+---
+
+## 5. GET /api/robots/{id} (특정 로봇 상태)
+
+### 요청
+```http
+GET /api/robots/1
+```
+
+**Path 파라미터:**
+- `id` (integer) - 로봇 ID
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "robot_id": 1,
+  "name": "Robot-A",
+  "model": "Warehouse-Bot-v2",
+  "status": "active",
+  "battery_level": 80,
+  "last_seen": "2024-12-06T10:30:05",
+  "recent_sensors": [
+    {
+      "sensor_type": "IMU",
+      "timestamp": "2024-12-06T10:30:05",
+      "data": {
+        "acceleration": {"x": 1.2, "y": -0.5, "z": 9.8}
+      }
+    },
+    {
+      "sensor_type": "GPS",
+      "timestamp": "2024-12-06T10:30:04",
+      "data": null
+    }
+  ]
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 404 | Robot not found | robot_id 존재하지 않음 |
+
+**Redis 캐싱:**
+- 키: `robot:{id}:status`
+- TTL: 10초
+- 첫 요청: ~50ms (DB 조회)
+- 이후 10초간: ~5ms (Redis 조회)
+
+---
+
+## 6. GET /api/stats (통계 데이터)
+
+### 요청
+```http
+GET /api/stats?start_time=2024-12-06T14:00:00&end_time=2024-12-06T15:00:00
+```
+
+**쿼리 파라미터:**
+- `start_time` (optional, ISO 8601) - 시작 시간
+- `end_time` (optional, ISO 8601) - 종료 시간
+- 둘 다 없으면: 최근 1시간 기본
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "timestamp": "2024-12-06T16:00:00",
+  "time_range": {
+    "start": "2024-12-06T14:00:00",
+    "end": "2024-12-06T15:00:00"
+  },
+  "hourly_averages": {
+    "2024-12-06T14:00:00": {
+      "IMU": {
+        "acceleration": {"x": 1.15, "y": -0.48, "z": 9.81}
+      },
+      "LiDAR": {
+        "distance": 3.2
+      }
+    }
+  },
+  "null_rates": {
+    "IMU": 0.02,
+    "GPS": 0.15,
+    "LiDAR": 0.01
+  },
+  "robot_summary": {
+    "total_robots": 12,
+    "active": 10,
+    "inactive": 2,
+    "status_details": [
+      {
+        "robot_id": 3,
+        "status": "inactive",
+        "last_seen": "2024-12-06T09:00:00"
+      }
+    ]
+  }
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid time format | 시간 형식 오류 |
+
+**Redis 캐싱:**
+- 키: `stats:latest`
+- TTL: 1분
+- 첫 요청: ~500ms (복잡한 집계)
+- 이후 1분간: ~5ms (Redis)
+
+---
+
+## 7. GET /api/sensors/filtered (필터링된 데이터) - Phase 2
+
+### 요청
+```http
+GET /api/sensors/filtered?robot_id=1&filter_type=outlier_removal
+```
+
+**쿼리 파라미터:**
+- `robot_id` (optional, integer) - 특정 로봇 필터링
+- `filter_type` (optional, enum) - moving_average, outlier_removal
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "sensor_data_id": 123,
+      "process_type": "filtering",
+      "processed_data": {
+        "filter_method": "outlier_removal",
+        "sensor_type": "IMU",
+        "original": {
+          "acceleration": {"x": 15.0, "y": -0.5, "z": 9.8}
+        },
+        "filtered": {
+          "acceleration": {"x": 1.0, "y": -0.5, "z": 9.8}
+        },
+        "outliers_removed": 1
+      },
+      "created_at": "2024-12-06T10:00:10"
+    }
+  ]
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 400 | Invalid filter_type | 잘못된 필터 타입 |
+
+---
+
+## 8. POST /api/transform (좌표 변환) - Phase 2
+
+### 요청
+```http
+POST /api/transform
+Content-Type: application/json
+```
+```json
+{
+  "sensor_data_id": 123,
+  "transform_type": "robot_to_world"
+}
+```
+
+**필수 필드:**
+- `sensor_data_id` (integer) - 원본 센서 데이터 ID
+- `transform_type` (string) - robot_to_world
+
+### 응답
+
+**성공 (200 OK)**
+```json
+{
+  "status": "success",
+  "transform_result": {
+    "robot_coordinates": {"x": 1.0, "y": 2.0, "z": 0.5},
+    "world_coordinates": {"x": 5.3, "y": 7.2, "z": 0.5}
+  },
+  "processed_data_id": 45
+}
+```
+
+**에러**
+
+| 코드 | 메시지 | 설명 |
+|------|--------|------|
+| 404 | Sensor data not found | sensor_data_id 존재하지 않음 |
+| 400 | Invalid transform_type | 잘못된 변환 타입 |
+
+---
+
+## 공통 사항
+
+### 인증 (Phase 3 고려사항)
+- 현재: 인증 없음
+- 향후: Token Authentication 추가 예정
+
+### Rate Limiting (Phase 3 고려사항)
+- 현재: 제한 없음
+- 향후: IP당 1000 req/min 제한 예정
+
+### CORS
+- 개발: 모든 origin 허용
+- 운영: 특정 domain만 허용
