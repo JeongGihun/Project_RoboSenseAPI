@@ -12,7 +12,7 @@ High-Performance Sensor Data Processing API for Robotics
 ```
 
 ## 개발 기간
-- 2025. 12. 13 ~ 진행중
+- '2025. 12. 13 ~ 진행중
 
 ## 주요 기능
 - 센서 데이터 수집
@@ -27,7 +27,7 @@ python -m venv .venv
 ```
 
 ### 2. 의존성 설치
-```bash
+```
 pip install -r requirements.txt
 ```
 
@@ -57,4 +57,5 @@ RobosenseAPI/
 - Python (3.11)
 - FastAPI
 - Uvicorn
+
 
