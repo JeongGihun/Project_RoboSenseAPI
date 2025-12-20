@@ -17,23 +17,24 @@ High-Performance Sensor Data Processing API for Robotics
 ## 주요 기능
 - 센서 데이터 수집
 - 센서 데이터 조회 및 필터링
+- PostgreSQL 연동 (SQLAlchemy)
 
 ## 실행 방법
 
-### 1. 가상환경 생성 및 활성화
+### 1. PostgreSQL 시작
+```
+docker start postgres-robosense
+```
+
+### 2. 가상환경 생성 및 활성화
 ```
 python -m venv .venv
 .venv\Scripts\activate  # Windows
 ```
 
-### 2. 의존성 설치
-```
-pip install -r requirements.txt
-```
-
 ### 3. 서버 실행
 ```
-python -m uvicorn app.main:app --reload
+uvicorn app.main:app --reload
 ```
 
 ### 4. API 문서 확인
@@ -44,10 +45,12 @@ python -m uvicorn app.main:app --reload
 RobosenseAPI/
 ├── app/
 │   ├── main.py          # FastAPI 앱
+│   ├── database.py      # DB 연결 설정 (추가!)
 │   ├── models/
-│   │   └── sensor.py    # Pydantic 스키마
+│   │   ├── sensor.py    # Pydantic 스키마
+│   │   └── db_models.py # SQLAlchemy 모델 (추가!)
 │   └── routes/
-│       └── sensor_routes.py  # API 엔드포인트
+│       └── sensor_routes.py
 ├── .venv/
 ├── requirements.txt
 └── README.md
@@ -57,5 +60,9 @@ RobosenseAPI/
 - Python (3.11)
 - FastAPI
 - Uvicorn
+- PostgreSQL
+- SQLAlchemy
+- Docker
+
 
 
