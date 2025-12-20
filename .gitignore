@@ -30,4 +30,4 @@ Thumbs.db
 *.sqlite3
 
 # log
-*.log
+*.logd
