@@ -15,9 +15,13 @@ High-Performance Sensor Data Processing API for Robotics
 - '2025. 12. 13 ~ 진행중
 
 ## 주요 기능
-- 센서 데이터 수집
-- 센서 데이터 조회 및 필터링
-- PostgreSQL 연동 (SQLAlchemy)
+- POST /api/sensors - 센서 데이터 수집
+- GET /api/sensors - 센서 데이터 조회 및 필터링
+- GET /api/sensors/{id} - 특정 데이터 조회 및 필터링
+- POST /api/robots - 로봇 등록
+- GET /api/robots - 로봇 목록 조회
+- GET /api/robots/{id} - 특정 로봇 목록 조회
+- PostgreSQL 연동 (SQLAlchemy ORM)
 
 ## 실행 방법
 
@@ -48,21 +52,21 @@ RobosenseAPI/
 │   ├── database.py      # DB 연결 설정 (추가!)
 │   ├── models/
 │   │   ├── sensor.py    # Pydantic 스키마
+│   │   ├── robot.py     # Pydantic 스키마
+│   │   ├── enum.py      # enum 정의
 │   │   └── db_models.py # SQLAlchemy 모델 (추가!)
 │   └── routes/
+│       ├── robot_routes.py
 │       └── sensor_routes.py
 ├── .venv/
 ├── requirements.txt
 └── README.md
 ```
 
-## 기술 스택
+## 기술 스택 / 사용 Tool
 - Python (3.11)
 - FastAPI
 - Uvicorn
 - PostgreSQL
 - SQLAlchemy
 - Docker
-
-
-
