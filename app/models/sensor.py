@@ -1,14 +1,30 @@
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Dict, List, Optional, Union
 from datetime import datetime
 
 class IMUData(BaseModel) :
     acceleration : Dict[str, float]
     gyroscope : Dict[str, float]
 
+class GPSData(BaseModel) :
+    latitude : float
+    longitude : float
+
+class LiDARData(BaseModel) :
+    distance : float
+    angle : float
+
 class SensorItem(BaseModel) :
     sensor_type : str
-    data : IMUData | None
+    data : Optional[Union[IMUData | GPSData | LiDARData]] = None
+
+class SensorResponse(BaseModel) :
+    id : int
+    robot_id : int
+    sensor_type : str
+    timestamp : datetime
+    raw_data : dict | None
+    created_at : datetime
 
 class SensorDataCreate(BaseModel) :
     robot_id : int
@@ -16,3 +32,4 @@ class SensorDataCreate(BaseModel) :
     sensors : List[SensorItem]
 
 # pydantic으로 자동 타입 검증
+# 형식을 무조건 작성해야함. 전체를 List로 받는 경우는 가능

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import sensor_routes
+from app.routes import sensor_routes, robot_routes
 from app.database import engine, Base
 from contextlib import asynccontextmanager
 
@@ -16,6 +16,7 @@ app = FastAPI(
     lifespan = lifespan
 )
 app.include_router(sensor_routes.router)
+app.include_router(robot_routes.router)
 
 @app.get("/")
 def root() :
