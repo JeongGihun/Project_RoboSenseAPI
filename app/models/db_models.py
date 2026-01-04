@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, CheckConstraint, Enum, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, JSON, CheckConstraint, Enum, ForeignKey, Index
 from app.database import Base
 from datetime import datetime, timezone
 from app.models.enum import Status, SensorName
@@ -17,14 +17,24 @@ class Robot(Base) :
 
     sensor_data = relationship("SensorData", back_populates= "robot")
 
+    __table_args__ = (
+        Index('idx_status', 'status'),
+    )
+
 class SensorData(Base) :
     __tablename__ = "sensor_data"
 
     id = Column(Integer, primary_key=True, index = True)
-    robot_id = Column(Integer, ForeignKey("robots.id"), index = True)
+    robot_id = Column(Integer, ForeignKey("robots.id"))
     sensor_type = Column(Enum(SensorName), nullable = False)
     timestamp = Column(DateTime(timezone=True))
     raw_data = Column(JSON)
     created_at = Column(DateTime(timezone=True), default = lambda:datetime.now(timezone.utc))
 
     robot = relationship("Robot", back_populates="sensor_data")
+
+    __table_args__ = (
+        Index('idx_sensor', 'sensor_type'),
+        Index('idx_timestamp', 'timestamp'),
+        Index('idx_robot_timestamp', 'robot_id', 'timestamp')
+    )

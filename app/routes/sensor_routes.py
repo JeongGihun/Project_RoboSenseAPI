@@ -4,7 +4,7 @@ from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
 from sqlalchemy import select
-from typing import List
+from typing import List, Optional
 
 router = APIRouter()
 
@@ -34,8 +34,17 @@ async def collect_sensor_data(data : SensorDataCreate, db : AsyncSession = Depen
         raise HTTPException(status_code=500, detail = f"센서 데이터 등록 실패 : {str(e)}")
 
 @router.get('/api/sensors', response_model = List[SensorResponse], status_code = status.HTTP_200_OK)
-async def check_filter_data(db : AsyncSession = Depends(get_db)) :
+async def check_filter_data(
+        robot_id : Optional[int] = None,
+        sensor_type : Optional[str] = None,
+        db : AsyncSession = Depends(get_db)) :
     query = select(SensorData)
+    if robot_id :
+        query = query.where(SensorData.robot_id == robot_id)
+
+    if sensor_type :
+        query = query.where(SensorData.sensor_type == sensor_type)
+
     result = await db.execute(query)
     sensors = result.scalars().all()
     return sensors
