@@ -44,10 +44,14 @@ uvicorn app.main:app --reload
 ```
 
 ### 4. API 문서 확인
+```
 - Swagger UI: http://127.0.0.1:8000/docs
+```
 
 ### 5. Locust 부하 테스트
+```
 - locust -f test/locustfile.py --host=http://localhost:8000
+```
 
 ## 프로젝트 구조
 ```
@@ -86,9 +90,10 @@ RobosenseAPI/
 ```
 기준 : User 50명, Spawn Rate 5명/초, Data 50,000개
 결과 : TPS (16.4) / Fail (0) / Average response (3,635ms)
-분석사항
+< 분석사항 >
 1. 커넥션풀 사이즈 변경 (10,5 -> 50,50) / TPS 변동 없음
 2. DB 쿼리 속도 확인 : SELECT(2.5ms), JOIN(33.9) / 문제 없음
-결론
+< 결론 >
 어디서 문제인지 모르겠음. 문제 파악하면서, 당장 조금이라도 줄일 수 있는 방법은 Redis로 변경해보자
 ```
+
