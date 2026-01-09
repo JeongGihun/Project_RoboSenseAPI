@@ -45,12 +45,12 @@ uvicorn app.main:app --reload
 
 ### 4. API 문서 확인
 ```
-- Swagger UI: http://127.0.0.1:8000/docs
+Swagger UI: http://127.0.0.1:8000/docs
 ```
 
 ### 5. Locust 부하 테스트
 ```
-- locust -f test/locustfile.py --host=http://localhost:8000
+locust -f test/locustfile.py --host=http://localhost:8000
 ```
 
 ## 프로젝트 구조
@@ -100,4 +100,5 @@ RobosenseAPI/
 
 ## 회고
 - 10주차 : FastAPI 사용해서 프로그램 만들 때까지, 처음 보는 것들이 너무 많아 힘들다고 생각했는데 산 넘어 산인 것 같다. TPS를 측정하고 분석하니 어디서부터 손을 대야할 지도 모르겠다. 하지만 좌절하지는 않았다. 분명 내가 모르는 어느 지점에서 문제가 생긴 것이고 찾으면 되니. 매주 쉬는 날 없이 개발을 공부하다보니 지친 날도 있지만 그보단 고양감이 올라온다. 다음주에도 깨닫음을 얻을 수 있길.
+
 
