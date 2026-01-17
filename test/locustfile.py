@@ -1,7 +1,7 @@
-from locust import HttpUser, task, constant, between
+from locust import HttpUser, task, constant
 import random
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 def generate_sensor_payload(robot_id, timestamp) :
     """페이로드 생성"""
@@ -96,7 +96,13 @@ class User(HttpUser) :
         }
         self.client.post("/api/robots", json = robot_data)
 
-    # @task(1)
-    # def get_stats(self):
-    #     """센서 데이터 통계"""
-    # 이 외에도 stats 관련된 부분 추가 필요
+    @task(1)
+    def get_stats(self):
+        """센서 데이터 통계"""
+        self.client.get("/api/stats")
+    # 시간 별 기능은 만들었으나, 우선 디폴트만 테스트
+
+
+    # @task(50)
+    # def ping(self):
+    #     self.client.get("/health_check")

@@ -1,13 +1,16 @@
 from fastapi import FastAPI
-from app.routes import sensor_routes, robot_routes
+from app.routes import sensor_routes, robot_routes, stats_routes
 from app.database import engine, Base
 from contextlib import asynccontextmanager
+from app.redis_client import connect_redis, close_redis, get_redis
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn :
         await conn.run_sync(Base.metadata.create_all)
+    await connect_redis()
     yield
+    await close_redis()
 
 app = FastAPI(
     title = "RobosenseAPI",
@@ -17,6 +20,7 @@ app = FastAPI(
 )
 app.include_router(sensor_routes.router)
 app.include_router(robot_routes.router)
+app.include_router(stats_routes.router)
 
 @app.get("/")
 def root() :

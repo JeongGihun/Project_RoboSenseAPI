@@ -5,7 +5,7 @@ import time
 
 BASE_URL = "http://localhost:8000"
 TOTAL_ROBOT = 10
-TOTAL_REQUESTS = 50000
+TOTAL_REQUESTS = 1000
 
 def create_robot() :
     """로봇 10대 생성"""

@@ -26,6 +26,11 @@ class SensorResponse(BaseModel) :
     raw_data : dict | None
     created_at : datetime
 
+class SensorListResponse(BaseModel) :
+    data : List[SensorResponse]
+    next_cursor : Optional[int]
+    has_more : bool
+
 class SensorDataCreate(BaseModel) :
     robot_id : int
     timestamp : datetime
