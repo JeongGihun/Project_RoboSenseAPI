@@ -51,6 +51,7 @@ def generate_sensor_payload(robot_id, timestamp) :
     }
 
 class User(HttpUser) :
+    host = "http://localhost"
     wait_time = constant(0)
 
     @task(40)

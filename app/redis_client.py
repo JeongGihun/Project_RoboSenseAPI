@@ -1,6 +1,7 @@
 from redis.asyncio import Redis
 from typing import Optional
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -10,8 +11,8 @@ async def connect_redis() -> Redis :
     global redis_client
 
     redis_client = Redis(
-        host = "localhost",
-        port = 6379,
+        host = os.getenv("REDIS_HOST"),
+        port = int(os.getenv("REDIS_PORT")),
         decode_responses=True,
         encoding="utf-8",
         db=0

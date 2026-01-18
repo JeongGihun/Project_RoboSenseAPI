@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 가상환경
+venv/
+.venv/
+env/
+ENV/
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 문서
+*.md
+docs/
+
+# 환경 변수 (docker-compose에서 주입)
+.env
+.env.*
+
+# 로그
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Locust
+locustfile.py

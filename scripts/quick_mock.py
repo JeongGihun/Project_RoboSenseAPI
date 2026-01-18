@@ -2,7 +2,7 @@ import requests
 import random
 from datetime import datetime
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = "http://localhost"
 
 
 def quick_mock():

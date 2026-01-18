@@ -1,0 +1,165 @@
+services :
+  # PostgreSQL DB
+  postgres :
+    image : postgres:16
+    container_name: robosense-postgres
+    environment:
+      POSTGRES_USER : postgres
+      POSTGRES_PASSWORD : yourpassword
+      POSTGRES_DB : robosense_db
+    ports :
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - robosense-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval : 10s
+      timeout : 5s
+      retries : 5
+
+  # Redis 캐시
+  redis:
+    image : redis:7
+    container_name : robosense-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - robosense-network
+    healthcheck:
+      test : ["CMD", "redis-cli", "ping"]
+      interval : 10s
+      timeout : 5s
+      retries : 5
+
+  # FastAPI 인스턴스 1
+  fastapi-1:
+    build : .
+    container_name: fastapi-1
+    environment:
+      POSTGRES_HOST : postgres
+      POSTGRES_PORT : 5432
+      POSTGRES_USER : postgres
+      POSTGRES_PASSWORD : yourpassword
+      POSTGRES_DB : robosense_db
+      REDIS_HOST : redis
+      REDIS_PORT : 6379
+    depends_on:
+      postgres :
+        condition : service_healthy
+      redis :
+        condition : service_healthy
+    restart: on-failure
+    networks:
+      - robosense-network
+
+  # FastAPI 인스턴스 2
+  fastapi-2:
+    build: .
+    container_name: fastapi-2
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: robosense_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - robosense-network
+
+  # FastAPI 인스턴스 3
+  fastapi-3:
+    build: .
+    container_name: fastapi-3
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: robosense_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - robosense-network
+
+  # FastAPI 인스턴스 4
+  fastapi-4:
+    build: .
+    container_name: fastapi-4
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: robosense_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - robosense-network
+
+  # FastAPI 인스턴스 5
+  fastapi-5:
+    build: .
+    container_name: fastapi-5
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yourpassword
+      POSTGRES_DB: robosense_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - robosense-network
+
+  # Nginx 로드 밸런서
+  nginx :
+    image : nginx:latest
+    container_name : robosense-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - fastapi-1
+      - fastapi-2
+      - fastapi-3
+      - fastapi-4
+      - fastapi-5
+    networks :
+      - robosense-network
+
+# 볼륨 정의 (데이터 영속성)
+volumes :
+  postgres-data:
+
+# 네트워크
+networks:
+  robosense-network:
+    driver: bridge

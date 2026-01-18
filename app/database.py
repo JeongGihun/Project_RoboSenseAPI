@@ -1,13 +1,22 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-import time
+import os
 import logging
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-SQLALCHEMY_DATABASE_URL = "postgresql+asyncpg://postgres:yourpassword@localhost:5434/robosense_db"
+load_dotenv()
+
+# 뒤에 있는것은 변수. 실제 값이 아님
+POSTGRES_HOST = os.getenv("POSTGRES_HOST")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT")
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
+SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo = False, pool_size = 50, max_overflow = 50)
 
