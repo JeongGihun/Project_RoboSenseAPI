@@ -28,7 +28,7 @@ async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depend
         )
         db.add(db_robot)
         await db.commit()
-        await db.refresh(db_robot)
+
         # 캐시 무효화
         await redis.delete("robots:all")
         await redis.delete(f"robots:status:{data.status}")

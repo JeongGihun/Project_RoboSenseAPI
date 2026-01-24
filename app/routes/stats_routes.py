@@ -1,15 +1,86 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData, Robot
-from sqlalchemy import select
+from sqlalchemy import select, func, case
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-from app.models.enum import SensorName
+from app.models.enum import SensorName, Status
 from app.redis_client import get_redis
-import json
+import json, asyncio
 
 router = APIRouter(prefix="/api", tags=["통계"])
+
+async def calculate_stats(
+        db: AsyncSession,
+        start_time : datetime,
+        end_time : datetime
+) -> dict :
+    sensor_query = select(SensorData.sensor_type, func.count().label('total'), func.sum(
+        case((SensorData.raw_data == None, 1), else_ = 0)).label('null_count')).where(
+        SensorData.created_at > start_time, SensorData.created_at <= end_time
+    ).group_by(SensorData.sensor_type)
+
+    sensor_result = await db.execute(sensor_query)
+    sensors_stats = sensor_result.all()
+
+    # null 계산
+    null_rates = {}
+
+    for sensor_type, total, null_count in sensors_stats :
+        if total > 0 :
+            null_rates[sensor_type.value] = round(null_count / total, 2)
+        else :
+            null_rates[sensor_type.value] = 0.0
+
+
+    for sensor_type in SensorName :
+        if sensor_type.value not in null_rates :
+            null_rates[sensor_type.value] = 0.0
+
+    # robot 계산
+    robot_query = select(Robot.status, func.count().label('count')).group_by(Robot.status)
+    robot_result = await db.execute(robot_query)
+    robots_stats = robot_result.all()
+
+    status_counts = {}
+
+    for status, count in robots_stats :
+        status_counts[status.value] = count
+
+    total_robot = sum(status_counts.values())
+    active = status_counts.get('active', 0)
+    inactive = status_counts.get('inactive', 0)
+
+    inactive_query = select(Robot).where(Robot.status == 'inactive')
+    inactive_result = await db.execute(inactive_query)
+    inactive_robot_data = inactive_result.scalars().all()
+
+    inactive_robots = [
+        {
+            "robot_id" : r.id,
+            "status" : r.status.value,
+            "last_seen" : r.last_seen
+        }
+        for r in inactive_robot_data
+    ]
+
+    robot_summary = {
+        "total_robot" : total_robot,
+        "active" : active,
+        "inactive" : inactive,
+        "status_details" : inactive_robots
+    }
+
+    return {
+            "timestamp": datetime.now(timezone.utc),
+            "time_range": {
+                "start": start_time,
+                "end": end_time
+            },
+            "null_rates": null_rates,
+            "robot_summary": robot_summary
+        }
 
 #GET /stats (통계)
 
@@ -26,66 +97,35 @@ async def get_stats(
         cache_key = "stats:recent"
         cached_stats = await redis.get(cache_key)
         if cached_stats :
+            ttl = await redis.ttl(cache_key)
+
+            # 캐시 워밍. 10초 이하 남을 경우 갱신
+            if ttl < 10 :
+                asyncio.create_task(regenerate_stats_cache(db))
             return json.loads(cached_stats)
 
     if start_time is None :
         start_time = datetime.now(timezone.utc) - timedelta(hours=1)
     if end_time is None :
         end_time = datetime.now(timezone.utc)
-    query = select(SensorData).where(SensorData.created_at > start_time).where(SensorData.created_at <= end_time)
-    result = await db.execute(query)
-    sensors = result.scalars().all()
 
-    # null 계산
-    null_rates = {}
-
-    for sensor_type in SensorName :
-        specific_sensor_data = [data for data in sensors if data.sensor_type == sensor_type.value]
-
-        if len(specific_sensor_data) == 0 :
-            null_rates[sensor_type.value] = 0.0
-            continue
-        null_count = len([s for s in specific_sensor_data if s.raw_data is None])
-        null_rate = null_count / len(specific_sensor_data)
-        null_rates[sensor_type.value] = round(null_rate, 2)
-
-    # robot 계산
-    robot_query = select(Robot)
-    robot_result = await db.execute(robot_query)
-    robots = robot_result.scalars().all()
-
-    total_robot = len(robots)
-    active = len([r for r in robots if r.status == "active"])
-    inactive = len([r for r in robots if r.status == "inactive"])
-    inactive_robots = [
-        {
-            "robot_id" : r.id,
-            "status" : r.status,
-            "last_seen" : r.last_seen
-        }
-        for r in robots if r.status == "inactive"
-    ]
-
-    robot_summary = {
-        "total_robot" : total_robot,
-        "active" : active,
-        "inactive" : inactive,
-        "status_details" : inactive_robots
-    }
-
-    response_data = {
-            "timestamp": datetime.now(timezone.utc),
-            "time_range": {
-                "start": start_time,
-                "end": end_time
-            },
-            "null_rates": null_rates,
-            "robot_summary": robot_summary
-        }
+    response_data = await calculate_stats(db, start_time, end_time)
 
     # 캐싱
     if use_cache :
         await redis.setex("stats:recent", 60, json.dumps(response_data, default=str))
     return response_data
 
-## 여기 검토 다시받아야함
+async def regenerate_stats_cache(db: AsyncSession) :
+    try :
+        redis = get_redis()
+
+        start_time = datetime.now(timezone.utc) - timedelta(hours=1)
+        end_time = datetime.now(timezone.utc)
+
+        response_data = await calculate_stats(db, start_time, end_time)
+        await redis.setex("stats:recent", 60, json.dumps(response_data, default=str))
+
+    except Exception as e :
+        print(f"백그라운드 캐시 갱신 실패: {e}")
+

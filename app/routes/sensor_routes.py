@@ -24,14 +24,17 @@ async def collect_sensor_data(data : SensorDataCreate, db : AsyncSession = Depen
         redis = get_redis()
         now = time.time()
 
-        for sensor_item in data.sensors :
-            db_sensor = SensorData(
-                robot_id=data.robot_id,
+        # Bulk insert
+        sensors_to_add = [
+            SensorData(
+                robot_id = data.robot_id,
                 sensor_type=sensor_item.sensor_type,
                 timestamp=data.timestamp,
                 raw_data=sensor_item.data.model_dump() if sensor_item.data else None
             )
-            db.add(db_sensor)
+            for sensor_item in data.sensors
+        ]
+        db.add_all(sensors_to_add)
         await db.commit()
         # 캐시 무효화
         if now - last_invalidation.get(data.robot_id, 0) > 10 :

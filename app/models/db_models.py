@@ -34,7 +34,8 @@ class SensorData(Base) :
     robot = relationship("Robot", back_populates="sensor_data")
 
     __table_args__ = (
-        Index('idx_sensor', 'sensor_type'),
-        Index('idx_timestamp', 'timestamp'),
-        Index('idx_robot_timestamp', 'robot_id', 'timestamp')
+        Index('idx_robot_sensor', 'robot_id', 'sensor_type'),
+        Index('idx_sensor_type', 'sensor_type'),
+        Index('idx_robot_timestamp', 'robot_id', 'timestamp'),
+        Index('idx_created_at', 'created_at')
     )
