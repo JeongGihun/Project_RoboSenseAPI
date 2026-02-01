@@ -36,7 +36,7 @@ async def collect_sensor_data(data : SensorDataCreate, db : AsyncSession = Depen
         ]
         db.add_all(sensors_to_add)
         await db.commit()
-        
+
         # 캐시 무효화
         if now - last_invalidation.get(data.robot_id, 0) > 10 :
             await redis.delete(f"robot:{data.robot_id}:detail")

@@ -1,4 +1,4 @@
-from redis.asyncio import Redis
+from redis.asyncio import Redis, ConnectionPool
 from typing import Optional
 import logging
 import os
@@ -6,17 +6,22 @@ import os
 logger = logging.getLogger(__name__)
 
 redis_client : Optional[Redis] = None
+connection_pool : Optional[ConnectionPool] = None
 
 async def connect_redis() -> Redis :
-    global redis_client
+    global redis_client, connection_pool
 
-    redis_client = Redis(
-        host = os.getenv("REDIS_HOST"),
-        port = int(os.getenv("REDIS_PORT")),
+    connection_pool = ConnectionPool(
+        host=os.getenv("REDIS_HOST"),
+        port=int(os.getenv("REDIS_PORT")),
+        db=0,
         decode_responses=True,
         encoding="utf-8",
-        db=0
+        max_connections=20,
+        socket_connect_timeout=5,
+        socket_keepalive=True
     )
+    redis_client = Redis(connection_pool = connection_pool)
 
     try :
         result = await redis_client.ping()
@@ -28,12 +33,19 @@ async def connect_redis() -> Redis :
     return redis_client
 
 async def close_redis() -> None :
-    global redis_client
+    global redis_client, connection_pool
+
     if redis_client :
         await redis_client.close()
         logger.info("Redis 연결 종료")
     else :
         logger.warning("Redis가 연결되어 있지 않음")
+
+    if connection_pool :
+        await connection_pool.disconnect()
+        logger.info("Redis Connection pool 연결 종료")
+    else :
+        logger.warning("Redis Connection pool이 연결되어 있지 않음")
 
 def get_redis() -> Redis :
     if redis_client is None :

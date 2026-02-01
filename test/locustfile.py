@@ -63,6 +63,16 @@ class User(HttpUser) :
 
         self.client.post("/api/sensors", json = payload)
 
+    @task(5)
+    def update_robot_status(self):
+        """로봇 상태 업데이트"""
+        robot_id = random.randint(1, 10)
+        update_data = {
+            "status" : random.choice(["active", "inactive", "maintenance"]),
+            "battery_level" : random.randint(20, 100)
+        }
+        self.client.put(f"/api/robots/{robot_id}", json = update_data)
+
     @task(3)
     def get_all_robots(self):
         """전체 로봇 조회"""
@@ -86,16 +96,16 @@ class User(HttpUser) :
         sensor_type = random.choice(["IMU", "GPS", "LiDAR"])
         self.client.get(f"/api/sensors?sensor_type={sensor_type}")
 
-    @task(1)
-    def register_robot(self):
-        """로봇 등록"""
-        robot_data = {
-            "name" : f"Robot-Locust-{uuid.uuid4().hex[:8]}",
-            "model" : "Bot-V2",
-            "status" : "active",
-            "battery_level" : random.randint(70, 100)
-        }
-        self.client.post("/api/robots", json = robot_data)
+    # @task(1)
+    # def register_robot(self):
+    #     """로봇 등록"""
+    #     robot_data = {
+    #         "name" : f"Robot-Locust-{uuid.uuid4().hex[:8]}",
+    #         "model" : "Bot-V2",
+    #         "status" : "active",
+    #         "battery_level" : random.randint(70, 100)
+    #     }
+    #     self.client.post("/api/robots", json = robot_data)
 
     @task(1)
     def get_stats(self):

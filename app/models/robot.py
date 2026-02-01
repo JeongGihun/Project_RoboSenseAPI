@@ -32,3 +32,7 @@ class RobotResponse(BaseModel) :
     battery_level : int = Field(ge=0, le=100)
     last_seen : datetime | None
     created_at : datetime
+
+class RobotStatusUpdate(BaseModel) :
+    status : Status
+    battery_level : int = Field(ge=0, le=100)

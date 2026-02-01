@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from app.routes import sensor_routes, robot_routes, stats_routes
 from app.database import engine, Base
 from contextlib import asynccontextmanager
@@ -18,6 +19,8 @@ app = FastAPI(
     version = "1.0.0",
     lifespan = lifespan
 )
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 app.include_router(sensor_routes.router)
 app.include_router(robot_routes.router)
 app.include_router(stats_routes.router)
