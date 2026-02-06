@@ -48,7 +48,7 @@ uvicorn app.main:app --reload
 
 ### 4. API 문서 확인
 ```
-Swagger UI: http://127.0.0.1:8000/docs
+Swagger UI: http://127.0.0.1:80/docs
 ```
 
 ### 5. Locust 부하 테스트
