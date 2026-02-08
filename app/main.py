@@ -4,12 +4,15 @@ from app.routes import sensor_routes, robot_routes, stats_routes
 from app.database import engine, Base
 from contextlib import asynccontextmanager
 from app.redis_client import connect_redis, close_redis, get_redis
+import asyncio, cProfile, pstats, time, os
+from pathlib import Path
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn :
         await conn.run_sync(Base.metadata.create_all)
     await connect_redis()
+    asyncio.create_task(sensor_routes.batch_commit_worker())
     yield
     await close_redis()
 

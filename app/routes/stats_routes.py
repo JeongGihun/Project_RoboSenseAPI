@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from app.models.enum import SensorName, Status
 from app.redis_client import get_redis
 import json, asyncio
+import sensor_cpp
 
 router = APIRouter(prefix="/api", tags=["통계"])
 
@@ -25,14 +26,7 @@ async def calculate_stats(
     sensors_stats = sensor_result.all()
 
     # null 계산
-    null_rates = {}
-
-    for sensor_type, total, null_count in sensors_stats :
-        if total > 0 :
-            null_rates[sensor_type.value] = round(null_count / total, 2)
-        else :
-            null_rates[sensor_type.value] = 0.0
-
+    null_rates = sensor_cpp.calculate_null_rates(list(sensors_stats))
 
     for sensor_type in SensorName :
         if sensor_type.value not in null_rates :
@@ -43,14 +37,7 @@ async def calculate_stats(
     robot_result = await db.execute(robot_query)
     robots_stats = robot_result.all()
 
-    status_counts = {}
-
-    for status, count in robots_stats :
-        status_counts[status.value] = count
-
-    total_robot = sum(status_counts.values())
-    active = status_counts.get('active', 0)
-    inactive = status_counts.get('inactive', 0)
+    robot_summary_base = sensor_cpp.calculate_robot_summary(list(robots_stats))
 
     inactive_query = select(Robot).where(Robot.status == 'inactive')
     inactive_result = await db.execute(inactive_query)
@@ -66,9 +53,7 @@ async def calculate_stats(
     ]
 
     robot_summary = {
-        "total_robot" : total_robot,
-        "active" : active,
-        "inactive" : inactive,
+        **robot_summary_base,
         "status_details" : inactive_robots
     }
 

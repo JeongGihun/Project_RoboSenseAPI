@@ -1,6 +1,5 @@
 from locust import HttpUser, task, constant
-import random
-import uuid
+import random, time
 from datetime import datetime, timedelta
 
 def generate_sensor_payload(robot_id, timestamp) :
@@ -54,24 +53,27 @@ class User(HttpUser) :
     host = "http://localhost"
     wait_time = constant(0)
 
-    @task(40)
+    def on_start(self) :
+        """시작 시 로봇 ID 할당"""
+        self.robot_id = random.randint(1, 10)
+
+    @task(100)
     def post_sensor_data(self):
         """센서 데이터 수집"""
-        robot_id = random.randint(1, 10)
         timestamp = datetime.now().isoformat()
-        payload = generate_sensor_payload(robot_id, timestamp)
+        payload = generate_sensor_payload(self.robot_id, timestamp)
 
         self.client.post("/api/sensors", json = payload)
 
-    @task(5)
+    @task(1)
     def update_robot_status(self):
         """로봇 상태 업데이트"""
-        robot_id = random.randint(1, 10)
         update_data = {
             "status" : random.choice(["active", "inactive", "maintenance"]),
             "battery_level" : random.randint(20, 100)
         }
-        self.client.put(f"/api/robots/{robot_id}", json = update_data)
+        self.client.put(f"/api/robots/{self.robot_id}", json = update_data)
+        time.sleep(1)
 
     @task(3)
     def get_all_robots(self):
@@ -81,14 +83,12 @@ class User(HttpUser) :
     @task(3)
     def get_robot_status(self):
         """특정 로봇 조회"""
-        robot_id = random.randint(1, 10)
-        self.client.get(f"/api/robots/{robot_id}")
+        self.client.get(f"/api/robots/{self.robot_id}")
 
     @task(1)
     def get_sensors_by_robot(self):
         """로봇 ID로 필터링 시"""
-        robot_id = random.randint(1, 10)
-        self.client.get(f"/api/sensors?robot_id={robot_id}")
+        self.client.get(f"/api/sensors?robot_id={self.robot_id}")
 
     @task(1)
     def get_sensors_by_type(self):

@@ -10,11 +10,17 @@ RUN apt-get update && apt-get install -y \
     g++ \
     cmake \
     build-essential \
-    && rm -rf /var/lib/apt/list/*
+    && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 파일 복사 및 설치
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# C++ 빌드
+COPY cpp_modules/ /app/cpp_modules/
+RUN cd /app/cpp_modules/sensor_cpp && \
+    pip install . && \
+    rm -rf build *.egg-info
 
 # 애플리케이션 복사
 COPY . .

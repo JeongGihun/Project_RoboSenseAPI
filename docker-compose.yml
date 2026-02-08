@@ -37,6 +37,10 @@ services :
   fastapi-1:
     build : .
     container_name: fastapi-1
+    cap_add :
+      - SYS_PTRACE
+    security_opt :
+      - seccomp:unconfined
     environment:
       POSTGRES_HOST : postgres
       POSTGRES_PORT : 5432
@@ -45,6 +49,9 @@ services :
       POSTGRES_DB : robosense_db
       REDIS_HOST : redis
       REDIS_PORT : 6379
+      ENABLE_PROFILING : "false"  # cProfile 미사용 / 사용
+    volumes :
+      - ./profiles:/app/profiles
     depends_on:
       postgres :
         condition : service_healthy
