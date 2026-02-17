@@ -21,6 +21,7 @@ Python과 C++ 병합
 - '26. 01. 18 ~ '26. 01. 25 : 복합 인덱스 추가, N+1문제 해결, 최적화 여부 확인 [TPS : 653]
 - '26. 01. 25 ~ '26. 02. 01 : 쿼리 최적화, 캐시워밍, Bulk insert 도입, 배치 간격 최적화 [TPS : 1,001]
 - '26. 02. 01 ~ '26. 02. 08 : C++ 모듈 도입 (센서 데이터, stats) [TPS : 1,001]
+- '26. 02. 09 ~ '26. 02. 17 : C++ 모듈 도입 (filtered), C++과 Python 연산 속도 비교
 
 ## 주요 기능
 - POST /api/sensors - 센서 데이터 수집
@@ -31,6 +32,7 @@ Python과 C++ 병합
 - GET /api/robots - 로봇 목록 조회
 - GET /api/robots/{id} - 특정 로봇 목록 조회
 - GET /api/stats - 최근 1시간 통계 조회
+- GET /api/sensors/filtered?robot_id={id}&sensor_type={type}&field={field}&window_size=5 - 최근 5초간 이동평균 조회
 
 ## 실행 방법
 
@@ -90,20 +92,24 @@ RobosenseAPI/
 │       └── stats_routes.py     # 통계 API
 ├── cpp_modules/                # C++ 모듈
 │   └── sensor_cpp/
-│       ├── sensor.cpp          # C++ 직렬화 & 계산
-│       └── setup.py            # pybind11 빌드 설정
+│       ├── sensor.cpp          # C++ 직렬화 & 필터링 & 통계 계산
+│       ├── sensor.h            # 헤더 파일
+│       ├── setup.py            # pybind11 빌드 설정
+│       └── test/
+│           ├── test_sensor_cpp.py      # pytest 단위 테스트
+│           └── test_bindings.py        # Catch2 테스트 (참고용)
 ├── scripts/
 │   ├── quick_mock.py           # Mock 데이터 생성
 │   └── db_test.py              # DB 쿼리 테스트
+├── tests/
+│   └── locustfile.py           # 부하 테스트 시나리오
 ├── .venv/                      # 가상환경 (gitignore)
 ├── Dockerfile                  # FastAPI 이미지 빌드
 ├── docker-compose.yml          # 전체 시스템 구성
 ├── nginx.conf                  # Nginx 로드 밸런서 설정
 ├── .dockerignore
-├── locustfile.py               # 부하 테스트 시나리오
 ├── requirements.txt            # Python 의존성
 ├── .env                        # 환경 변수 (gitignore)
-├── .env.docker                 # Docker용 환경 변수 (gitignore)
 ├── .gitignore
 └── README.md
 ```
@@ -141,6 +147,7 @@ Nginx (Port 80) - Load Balancer
 - Redis (7.1.0)
 - Py-spy
 - Pybind11 (Python-C++ 바인딩)
+- Pytest
 
 ## 부하 테스트
 - Week 10 ('26. 01. 04.)
@@ -193,6 +200,23 @@ Nginx (Port 80) - Load Balancer
 4. 추가 최적화: Nginx keepalive, asyncpg COPY, 워커 병렬화 검토 필요
 ```
 
+- Week 16 ('26. 02. 17.)
+```
+기준 : User 100명, Spawn Rate 10명/초, Data 재생성
+변경점 : C++ 모듈 도입. 최적화는 하지 않아, 단순 C++과 Python의 속도 차이 비교
+C++ 결과 : 720 ~ 880ms / Fail (0%)
+Python 결과 : 940 ~ 1100ms / Fail (0%)
+
+< 분석사항 >
+1. 우선 filtered 엔드포인트 최적화를 하지 않은 상태인 것을 감안
+2. C++과 Python의 경우 전체 20%의 속도 차이를 보임
+
+< 결론 >
+1. 해당 엔드포인트 최적화 필요. (측정 시간도 1분 측정 기준이지만, 현실을 기준으로 5초로 변경 필요)
+2. 이동평균 계산만으로도 20% 차이라면, 응용 시 굉장한 속도 차이를 보일 것으로 판단
+3. 해당 엔드포인트만 계산 시 더 많은 차이를 보일 것으로 예상됨
+```
+
 
 ## 회고
 - 10주차 : FastAPI 사용해서 프로그램 만들 때까지, 처음 보는 것들이 너무 많아 힘들다고 생각했는데 산 넘어 산인 것 같다. TPS를 측정하고 분석하니 어디서부터 손을 대야할 지도 모르겠다. 하지만 좌절하지는 않았다. 분명 내가 모르는 어느 지점에서 문제가 생긴 것이고 찾으면 되니. 매주 쉬는 날 없이 개발을 공부하다보니 지친 날도 있지만 그보단 고양감이 올라온다. 다음주에도 깨닫음을 얻을 수 있길.
@@ -200,6 +224,8 @@ Nginx (Port 80) - Load Balancer
 - 12주차 : 11주차도 했지만, 중간에 페이징네이션 도입이 필요하다는 것을 느껴 같이 하다보니 생략됨. 우선 내가 CS 지식으로만 알던 것을 도입하다보니 왜 필요하고, 코드 작성도 중요하지만 이를 어떻게 해결할 것인지도 굉장히 중요하다는 것을 깨닫은 2주였다. 그러다 보니 회사에서는 어떻게 도입을 했고 왜 그랬는지 자연스럽게 관심이 간다. 물론 워낙 방대하고, 당장 있는 Task가 있어 전부 알 순 없지만 시간이 가용할 때마다 조사해봐야겠다는 생각이 들었다.
 
 - 15주차 : 드디어 하고 싶던 C++ 모듈과 Python을 결합해보았다. Python자체가 중요한 부분은 c++로 연산처리하기에 효과적인 TPS의 상승은 없었지만, 굉장히 만족한다. 다만 갈수록 내가 알지 못하는 것, 어떤 부분을 병목 상태인지 해결할 것인지 모르겠다. 더 세부적으로 알아보고 극한으로 올릴 방법에 대해 공부해볼 필요가 있을 듯.
+
+- 16주차 : C++과 연동하면서 갑자기 어려운 지점들이 나와 쉽지 않았다. 다행히 설날이 겹쳐 많은 시간을 투자했더니, 어느 정도 이해가 되는 부분이 많았다. 놀란 부분은 내가 이론적으로 알고 있던 속도 차이가 실제로 일어났을때다. 전체적으로 29%에다 User도 100으로 설정했으니 C++의 장점을 분명히 알 수 있었다. 물론 Python의 연산에서 중요한 부분은 C++로 실행하지만, 세밀한 옵션에 차이를 두면 좋다는 것도 깨닫았다.
 
 
 
