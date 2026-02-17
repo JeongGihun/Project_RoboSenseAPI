@@ -2,6 +2,7 @@
 #include <pybind11/stl.h>
 #include <map>
 #include <string>
+#include <vector>
 
 namespace py = pybind11;
 
@@ -118,6 +119,24 @@ py::dict calculate_robot_summary(py::list robots_stats) {
     return result;
 }
 
+// 이동평균 처리. 실제 로봇에게 put시킬 것은 아니지만, 가지고 있어야 한다고 판단
+std::vector<double> moving_average(std::vector<double> data, int window_size) {
+    std::vector<double> result;
+
+    if (data.size() < window_size) {
+        return result;
+    }
+
+    for (int i = 0; i < data.size() - window_size+1; i++) {
+        double sum = 0.0;
+        for (int j = i; j < i + window_size; j++) {
+            sum += data[j];
+        }
+        result.push_back(sum/window_size);
+    }
+    return result;
+}
+
 // 바인딩
 PYBIND11_MODULE(sensor_cpp, m) {
     m.doc() = "C++ sensor data serialization module";
@@ -147,4 +166,8 @@ PYBIND11_MODULE(sensor_cpp, m) {
     m.def("calculate_robot_summary", &calculate_robot_summary,
         "Calculate robot status summary",
         py::arg("robot_stats"));
+
+    m.def("moving_average", &moving_average,
+        "Calculate moving_average",
+        py::arg("data"), py::arg("window_size"));
 }

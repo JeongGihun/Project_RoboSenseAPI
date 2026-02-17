@@ -113,6 +113,30 @@ class User(HttpUser) :
         self.client.get("/api/stats")
     # 시간 별 기능은 만들었으나, 우선 디폴트만 테스트
 
+    @task(2)
+    def get_filtered_imu_acc_x(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=IMU&field=acceleration.x&window_size=3")
+
+    @task(2)
+    def get_filtered_imu_acc_y(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=IMU&field=acceleration.y&window_size=3")
+
+    @task(2)
+    def get_filtered_imu_gyro_z(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=IMU&field=gyroscope.z&window_size=3")
+
+    @task(2)
+    def get_filtered_gps_lat(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=GPS&field=latitude&window_size=3")
+
+    @task(2)
+    def get_filtered_gps_lon(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=GPS&field=longitude&window_size=3")
+
+    @task(2)
+    def get_filtered_lidar_dist(self):
+        self.client.get(f"/api/sensors/filtered?robot_id={self.robot_id}&sensor_type=LiDAR&field=distance&window_size=3")
+
 
     # @task(50)
     # def ping(self):

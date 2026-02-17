@@ -36,5 +36,13 @@ class SensorDataCreate(BaseModel) :
     timestamp : datetime
     sensors : List[SensorItem]
 
+class FilteredSensorResponse(BaseModel) :
+    robot_id : int
+    sensor_type : str
+    field : str
+    original_data : Optional[List[float]] = None
+    filtered_data : Optional[List[float]] = None
+    window_size : int
+
 # pydantic으로 자동 타입 검증
 # 형식을 무조건 작성해야함. 전체를 List로 받는 경우는 가능

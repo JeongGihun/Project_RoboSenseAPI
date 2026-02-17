@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Query
-from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse
+from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
 from app.database import get_db, async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
@@ -8,6 +8,7 @@ from typing import Optional
 from app.redis_client import get_redis
 from collections import deque
 import logging, time, asyncio
+from datetime import datetime, timedelta
 import sensor_cpp
 
 router = APIRouter()
@@ -91,6 +92,69 @@ async def check_filter_data(
         "has_more": has_more
     }
 
+@router.get('/api/sensors/filtered', response_model=FilteredSensorResponse, status_code=status.HTTP_200_OK)
+async def check_filter_sensor_data(
+        robot_id : int , sensor_type : str,
+        field : str, window_size : int, db : AsyncSession = Depends(get_db)):
+    query = select(SensorData).where(SensorData.robot_id == robot_id)
+    query = query.where(SensorData.sensor_type == sensor_type)
+    query = query.where(SensorData.timestamp >= datetime.now() - timedelta(minutes=1))
+    query = query.order_by(SensorData.timestamp.asc())
+
+    result = await db.execute(query)
+    sensors = result.scalars().all()
+
+    if not sensors:
+        return {
+            "robot_id": robot_id,
+            "sensor_type": sensor_type,
+            "field": field,
+            "original_data": [],
+            "filtered_data": [],
+            "window_size": window_size
+        }
+
+    parts = field.split(".")
+
+    # 센서에서 값 추출
+    original_data = []
+    for sensor in sensors :
+        if sensor.raw_data is None :
+            continue
+
+        try :
+            if len(parts) == 1 :
+                # GPS, LiDAR은 1개 필요
+                value = sensor.raw_data[parts[0]]
+            else :
+                value = sensor.raw_data[parts[0]][parts[1]]
+
+            original_data.append(float(value))
+
+        except (KeyError, TypeError) :
+            continue
+
+    # C++ 버전 (비교용)
+    #filtered_data = sensor_cpp.moving_average(original_data, window_size)
+
+    # Python 버전 (비교용)
+    def moving_average_python(data, window_size):
+        result = []
+        for i in range(len(data) - window_size + 1):
+            window = data[i:i + window_size]
+            result.append(sum(window) / window_size)
+        return result
+
+    filtered_data = moving_average_python(original_data, window_size)
+
+    return {
+        "robot_id": robot_id,
+        "sensor_type": sensor_type,
+        "field": field,
+        "original_data": original_data,
+        "filtered_data": filtered_data,
+        "window_size": window_size
+    }
 
 @router.get('/api/sensors/{id}', response_model=SensorResponse, status_code=status.HTTP_200_OK)
 async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)):

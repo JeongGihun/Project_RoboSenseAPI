@@ -12,5 +12,9 @@ ext_modules = [
 setup(
     name="sensor_cpp",
     ext_modules=ext_modules,
-    cmdclass={"build_ext" : build_ext}
+    cmdclass={"build_ext" : build_ext},
+    # 테스트 의존성 추가
+    extras_require ={
+        "test" : ["pytest"],
+    }
 )
