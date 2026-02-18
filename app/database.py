@@ -18,7 +18,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo = False, pool_size = 20, max_overflow = 40, pool_timeout = 30, pool_recycle = 3600, pool_pre_ping = True)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo = False, pool_size = 10, max_overflow = 50, pool_timeout = 30, pool_recycle = 3600, pool_pre_ping = True)
 
 async_session = sessionmaker(engine, class_ = AsyncSession, expire_on_commit=False)
 

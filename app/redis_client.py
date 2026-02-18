@@ -17,7 +17,7 @@ async def connect_redis() -> Redis :
         db=0,
         decode_responses=True,
         encoding="utf-8",
-        max_connections=20,
+        max_connections=100,
         socket_connect_timeout=5,
         socket_keepalive=True
     )

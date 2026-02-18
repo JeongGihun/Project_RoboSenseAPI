@@ -7,7 +7,7 @@ from sqlalchemy import select
 from typing import Optional
 from app.redis_client import get_redis
 from collections import deque
-import logging, time, asyncio
+import logging, time, asyncio, json
 from datetime import datetime, timedelta
 import sensor_cpp
 
@@ -40,6 +40,14 @@ async def collect_sensor_data(data: SensorDataCreate):
 
         async with queue_lock:
             sensor_queue.extend(sensors_to_add)
+
+        for sensor_item in sensors_to_add :
+            if sensor_item.raw_data is None :
+                continue
+            key = f"sensor:{data.robot_id}:{sensor_item.sensor_type}"
+            await redis.lpush(key, json.dumps(sensor_item.raw_data))
+            await redis.ltrim(key, 0, 4)
+            await redis.expire(key, 10)
 
         # 캐시 무효화
         if now - last_invalidation.get(data.robot_id, 0) > 10:
@@ -95,16 +103,14 @@ async def check_filter_data(
 @router.get('/api/sensors/filtered', response_model=FilteredSensorResponse, status_code=status.HTTP_200_OK)
 async def check_filter_sensor_data(
         robot_id : int , sensor_type : str,
-        field : str, window_size : int, db : AsyncSession = Depends(get_db)):
-    query = select(SensorData).where(SensorData.robot_id == robot_id)
-    query = query.where(SensorData.sensor_type == sensor_type)
-    query = query.where(SensorData.timestamp >= datetime.now() - timedelta(minutes=1))
-    query = query.order_by(SensorData.timestamp.asc())
+        field : str, window_size : int):
+    # redis 가져오기
+    redis = get_redis()
+    key = f"sensor:{robot_id}:{sensor_type}"
+    raw_data_list = await redis.lrange(key, 0, -1)
 
-    result = await db.execute(query)
-    sensors = result.scalars().all()
-
-    if not sensors:
+    # 캐시 확인
+    if not raw_data_list :
         return {
             "robot_id": robot_id,
             "sensor_type": sensor_type,
@@ -118,16 +124,15 @@ async def check_filter_sensor_data(
 
     # 센서에서 값 추출
     original_data = []
-    for sensor in sensors :
-        if sensor.raw_data is None :
-            continue
+    for raw_data_json in raw_data_list :
+        raw_data = json.loads(raw_data_json)
 
         try :
             if len(parts) == 1 :
                 # GPS, LiDAR은 1개 필요
-                value = sensor.raw_data[parts[0]]
+                value = raw_data[parts[0]]
             else :
-                value = sensor.raw_data[parts[0]][parts[1]]
+                value = raw_data[parts[0]][parts[1]]
 
             original_data.append(float(value))
 
@@ -147,7 +152,7 @@ async def check_filter_sensor_data(
 
     filtered_data = moving_average_python(original_data, window_size)
 
-    return {
+    response_data = {
         "robot_id": robot_id,
         "sensor_type": sensor_type,
         "field": field,
@@ -155,6 +160,8 @@ async def check_filter_sensor_data(
         "filtered_data": filtered_data,
         "window_size": window_size
     }
+
+    return response_data
 
 @router.get('/api/sensors/{id}', response_model=SensorResponse, status_code=status.HTTP_200_OK)
 async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)):
