@@ -6,8 +6,7 @@ from app.models.db_models import SensorData
 from sqlalchemy import select
 from typing import Optional
 from app.redis_client import get_redis
-from collections import deque
-import logging, time, asyncio, json
+import logging, time, asyncio, json, math
 from datetime import datetime, timedelta
 import sensor_cpp
 
@@ -15,7 +14,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 last_invalidation = {}
-sensor_queue = deque()
+sensor_queue = asyncio.Queue()
 queue_lock = asyncio.Lock()
 
 
@@ -38,8 +37,8 @@ async def collect_sensor_data(data: SensorDataCreate):
             for sensor_item in data.sensors
         ]
 
-        async with queue_lock:
-            sensor_queue.extend(sensors_to_add)
+        for sensor in sensors_to_add :
+            sensor_queue.put_nowait(sensor)
 
         for sensor_item in sensors_to_add :
             if sensor_item.raw_data is None :
@@ -181,14 +180,16 @@ async def batch_commit_worker():
         try:
             await asyncio.sleep(0.3)
 
-            async with queue_lock:
-                if not sensor_queue:
-                    batch = []
-                else:
-                    batch = list(sensor_queue)
-                    sensor_queue.clear()
+            batch = []
+            count = math.ceil(sensor_queue.qsize() / 2)
 
-            if not batch:
+            for _ in range(count) :
+                try :
+                    batch.append(sensor_queue.get_nowait())
+                except asyncio.QueueEmpty :
+                    break
+
+            if not batch :
                 continue
 
             async with async_session() as session:

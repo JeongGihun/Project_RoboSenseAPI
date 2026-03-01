@@ -12,7 +12,8 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn :
         await conn.run_sync(Base.metadata.create_all)
     await connect_redis()
-    asyncio.create_task(sensor_routes.batch_commit_worker())
+    for _ in range(2) :
+        asyncio.create_task(sensor_routes.batch_commit_worker())
     yield
     await close_redis()
 
