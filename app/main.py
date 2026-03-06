@@ -1,20 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from app.routes import sensor_routes, robot_routes, stats_routes
-from app.database import engine, Base
+from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool
 from contextlib import asynccontextmanager
-from app.redis_client import connect_redis, close_redis, get_redis
-import asyncio, cProfile, pstats, time, os
-from pathlib import Path
+from app.redis_client import connect_redis, close_redis
+import asyncio
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn :
         await conn.run_sync(Base.metadata.create_all)
     await connect_redis()
-    for _ in range(2) :
+    await init_asyncpg_pool()
+    for _ in range(2):
         asyncio.create_task(sensor_routes.batch_commit_worker())
     yield
+    await close_asyncpg_pool()
     await close_redis()
 
 app = FastAPI(

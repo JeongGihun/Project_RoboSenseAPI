@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Query
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
-from app.database import get_db, async_session
+from app.database import get_db, get_asyncpg_pool, async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
 from sqlalchemy import select
 from typing import Optional
 from app.redis_client import get_redis
 import logging, time, asyncio, json, math
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 import sensor_cpp
 
 router = APIRouter()
@@ -172,13 +172,15 @@ async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404, detail="해당 로봇의 센서 데이터는 존재하지 않음")
     return sensor
 
+def sensor_to_tuple(sensor:SensorData) -> tuple :
+    return sensor.robot_id, sensor.sensor_type, sensor.timestamp, json.dumps(sensor.raw_data) if sensor.raw_data else None, datetime.now(timezone.utc)
 
 async def batch_commit_worker():
     """1초마다 큐에서 꺼내서 일괄 커밋"""
 
     while True:
         try:
-            await asyncio.sleep(0.3)
+            await asyncio.sleep(0.5)
 
             batch = []
             count = math.ceil(sensor_queue.qsize() / 2)
@@ -192,9 +194,11 @@ async def batch_commit_worker():
             if not batch :
                 continue
 
-            async with async_session() as session:
-                session.add_all(batch)
-                await session.commit()
+            async with get_asyncpg_pool().acquire() as conn:
+                logger.info(f"copy 배치 사이즈 : {len(batch)}")
+                await conn.copy_records_to_table(
+                    'sensor_data', records=[sensor_to_tuple(sensor) for sensor in batch], columns=['robot_id', 'sensor_type', 'timestamp', 'raw_data', 'created_at']
+                )
 
         except Exception as e:
             logger.error(f"배치 커밋 실패: {str(e)}")
