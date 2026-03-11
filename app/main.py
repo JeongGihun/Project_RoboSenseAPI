@@ -4,7 +4,13 @@ from app.routes import sensor_routes, robot_routes, stats_routes
 from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool
 from contextlib import asynccontextmanager
 from app.redis_client import connect_redis, close_redis
-import asyncio
+import asyncio, logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format = "%(asctime)s [%(levelname)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

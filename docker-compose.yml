@@ -5,9 +5,9 @@ services :
     container_name: robosense-postgres
     command : postgres -c max_connections=300
     environment:
-      POSTGRES_USER : postgres
-      POSTGRES_PASSWORD : yourpassword
-      POSTGRES_DB : robosense_db
+      POSTGRES_USER : ${POSTGRES_USER}
+      POSTGRES_PASSWORD : ${POSTGRES_PASSWORD}
+      POSTGRES_DB : ${POSTGRES_DB}
     ports :
       - "5432:5432"
     volumes:
@@ -43,13 +43,13 @@ services :
     security_opt :
       - seccomp:unconfined
     environment:
-      POSTGRES_HOST : postgres
-      POSTGRES_PORT : 5432
-      POSTGRES_USER : postgres
-      POSTGRES_PASSWORD : yourpassword
-      POSTGRES_DB : robosense_db
-      REDIS_HOST : redis
-      REDIS_PORT : 6379
+      POSTGRES_HOST : ${POSTGRES_HOST}
+      POSTGRES_PORT : ${POSTGRES_PORT}
+      POSTGRES_USER : ${POSTGRES_USER}
+      POSTGRES_PASSWORD : ${POSTGRES_PASSWORD}
+      POSTGRES_DB : ${POSTGRES_DB}
+      REDIS_HOST : ${REDIS_HOST}
+      REDIS_PORT : ${REDIS_PORT}
       ENABLE_PROFILING : "false"  # cProfile 미사용 / 사용
     volumes :
       - ./profiles:/app/profiles
@@ -67,13 +67,13 @@ services :
     build: .
     container_name: fastapi-2
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: robosense_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -88,13 +88,13 @@ services :
     build: .
     container_name: fastapi-3
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: robosense_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: r${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,13 +109,13 @@ services :
     build: .
     container_name: fastapi-4
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: robosense_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
@@ -130,13 +130,13 @@ services :
     build: .
     container_name: fastapi-5
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: yourpassword
-      POSTGRES_DB: robosense_db
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
