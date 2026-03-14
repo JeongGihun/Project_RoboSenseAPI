@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from app.models.robot import RobotCreate, RobotResponse, SensorInRobot, RobotDetailResponse, RobotStatusUpdate
-from app.database import get_db
+from app.database import get_db, get_replica_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import Robot, SensorData
 from sqlalchemy import select
@@ -75,7 +75,7 @@ async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, d
 @router.get('/api/robots', response_model = List[RobotResponse], status_code = status.HTTP_200_OK)
 async def robot_data_list(
         status : Optional[str] = Query(None, description = "Filter by robot status"),
-        db : AsyncSession = Depends(get_db)) :
+        db : AsyncSession = Depends(get_replica_db)) :
     # redis 가져오기
     redis = get_redis()
     if status :
@@ -112,7 +112,7 @@ async def robot_data_list(
     return robots_data
 
 @router.get('/api/robots/{id}', response_model = RobotDetailResponse, status_code = status.HTTP_200_OK)
-async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)) :
+async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_replica_db)) :
     # redis 가져오기
     redis = get_redis()
     cache_key = f"robot:{id}:detail"

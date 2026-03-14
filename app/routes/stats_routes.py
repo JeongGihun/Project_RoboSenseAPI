@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
-from app.database import get_db
+from fastapi import APIRouter, Depends
+from app.database import get_replica_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData, Robot
 from sqlalchemy import select, func, case
 from typing import Optional
 from datetime import datetime, timezone, timedelta
-from app.models.enum import SensorName, Status
+from app.models.enum import SensorName
 from app.redis_client import get_redis
 import json, asyncio
 import sensor_cpp
@@ -73,7 +73,7 @@ async def calculate_stats(
 async def get_stats(
         start_time : Optional[datetime] = None,
         end_time : Optional[datetime] = None,
-        db : AsyncSession = Depends(get_db)) :
+        db : AsyncSession = Depends(get_replica_db)) :
 
     # redis 가져오기
     redis = get_redis()

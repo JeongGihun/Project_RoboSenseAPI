@@ -19,15 +19,34 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo = False, pool_size = 10, max_overflow = 50, pool_timeout = 30, pool_recycle = 3600, pool_pre_ping = True)
+POSTGRES_REPLICA_HOST=os.getenv("POSTGRES_REPLICA_HOST")
+POSTGRES_REPLICA_PORT=os.getenv("POSTGRES_REPLICA_PORT")
+POSTGRES_REPLICA_USER=os.getenv("POSTGRES_REPLICA_USER")
+POSTGRES_REPLICA_PASSWORD=os.getenv("POSTGRES_REPLICA_PASSWORD")
+POSTGRES_REPLICA_DB=os.getenv("POSTGRES_REPLICA_DB")
+SQLALCHEMY_REPLICA_DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_REPLICA_USER}:{POSTGRES_REPLICA_PASSWORD}@{POSTGRES_REPLICA_HOST}:{POSTGRES_REPLICA_PORT}/{POSTGRES_REPLICA_DB}"
 
-async_session = sessionmaker(engine, class_ = AsyncSession, expire_on_commit=False)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False, pool_size=10, max_overflow=50, pool_timeout=30, pool_recycle=3600, pool_pre_ping=True)
+async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+if POSTGRES_REPLICA_HOST:
+    # Replica 설정 시
+    engine_replica = create_async_engine(SQLALCHEMY_REPLICA_DATABASE_URL, echo=False, pool_size=10, max_overflow=50, pool_timeout=30, pool_recycle=3600, pool_pre_ping=True)
+    async_session_replica = sessionmaker(engine_replica, class_=AsyncSession, expire_on_commit=False)
+else :
+    # Replica 없으면 Primary로 실행
+    engine_replica = engine
+    async_session_replica = async_session
 
 Base = declarative_base()
 
 async def get_db() :
     async with async_session() as session :
         yield session
+
+async def get_replica_db() :
+    async with async_session_replica() as session_replica :
+        yield session_replica
 
 def get_asyncpg_pool() :
     return asyncpg_pool

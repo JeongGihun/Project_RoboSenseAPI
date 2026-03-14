@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Query
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
-from app.database import get_db, get_asyncpg_pool, async_session
+from app.database import get_db, get_replica_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
 from sqlalchemy import select
@@ -74,7 +74,7 @@ async def check_filter_data(
         robot_id: Optional[int] = None,
         sensor_type: Optional[str] = None,
         cursor_id: Optional[int] = None,
-        db: AsyncSession = Depends(get_db)):
+        db: AsyncSession = Depends(get_replica_db)):
     query = select(SensorData).order_by(SensorData.id.desc())
 
     if cursor_id:
@@ -163,7 +163,7 @@ async def check_filter_sensor_data(
     return response_data
 
 @router.get('/api/sensors/{id}', response_model=SensorResponse, status_code=status.HTTP_200_OK)
-async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)):
+async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_replica_db)):
     query = select(SensorData)
     query = query.where(SensorData.id == id)
     result = await db.execute(query)
