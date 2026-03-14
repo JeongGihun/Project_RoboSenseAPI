@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Query
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
-from app.database import get_db, get_replica_db, get_asyncpg_pool
+from app.database import get_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
 from sqlalchemy import select
@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 last_invalidation = {}
 sensor_queue = asyncio.Queue()
-queue_lock = asyncio.Lock()
 
 
 @router.post('/api/sensors', status_code=status.HTTP_201_CREATED)
@@ -53,7 +52,6 @@ async def collect_sensor_data(data: SensorDataCreate):
             await redis.delete(f"robot:{data.robot_id}:detail")
             last_invalidation[data.robot_id] = now
 
-        # ← 이거 추가!
         if now - last_invalidation.get('stats', 0) > 60:
             await redis.delete("stats:recent")
             last_invalidation['stats'] = now
@@ -74,7 +72,7 @@ async def check_filter_data(
         robot_id: Optional[int] = None,
         sensor_type: Optional[str] = None,
         cursor_id: Optional[int] = None,
-        db: AsyncSession = Depends(get_replica_db)):
+        db: AsyncSession = Depends(get_db)):
     query = select(SensorData).order_by(SensorData.id.desc())
 
     if cursor_id:
@@ -139,17 +137,17 @@ async def check_filter_sensor_data(
             continue
 
     # C++ 버전 (비교용)
-    #filtered_data = sensor_cpp.moving_average(original_data, window_size)
+    filtered_data = sensor_cpp.moving_average(original_data, window_size)
 
     # Python 버전 (비교용)
-    def moving_average_python(data, window_size):
-        result = []
-        for i in range(len(data) - window_size + 1):
-            window = data[i:i + window_size]
-            result.append(sum(window) / window_size)
-        return result
-
-    filtered_data = moving_average_python(original_data, window_size)
+    # def moving_average_python(data, window_size):
+    #     result = []
+    #     for i in range(len(data) - window_size + 1):
+    #         window = data[i:i + window_size]
+    #         result.append(sum(window) / window_size)
+    #     return result
+    #
+    # filtered_data = moving_average_python(original_data, window_size)
 
     response_data = {
         "robot_id": robot_id,
@@ -163,7 +161,7 @@ async def check_filter_sensor_data(
     return response_data
 
 @router.get('/api/sensors/{id}', response_model=SensorResponse, status_code=status.HTTP_200_OK)
-async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_replica_db)):
+async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)):
     query = select(SensorData)
     query = query.where(SensorData.id == id)
     result = await db.execute(query)

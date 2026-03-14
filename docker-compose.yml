@@ -21,40 +21,6 @@ services :
       interval : 10s
       timeout : 5s
       retries : 5
-#  postgres-replica:
-#    image: postgres:16
-#    container_name: robosense-postgres-replica
-#    entrypoint: ""
-#    command: |
-#      bash -c "
-#      until pg_basebackup -h postgres -U postgres -D /var/lib/postgresql/data -Fp -Xs -R; do
-#        echo 'Primary 대기 중...'
-#        sleep 2
-#      done
-#      chown -R postgres:postgres /var/lib/postgresql/data
-#      chmod 700 /var/lib/postgresql/data
-#      exec gosu postgres postgres -c config_file=/etc/postgresql/postgresql.conf
-#      "
-#    environment:
-#      POSTGRES_USER: ${POSTGRES_USER}
-#      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-#      POSTGRES_DB: ${POSTGRES_DB}
-#    ports:
-#      - "5433:5432"
-#    volumes:
-#      - postgres-data-replica:/var/lib/postgresql/data
-#      - ./postgres/replica/postgresql.conf:/etc/postgresql/postgresql.conf
-#      - ./postgres/replica/init-replica.sh:/etc/postgresql/init-replica.sh
-#    depends_on:
-#      postgres:
-#        condition: service_healthy
-#    networks:
-#      - robosense-network
-#    healthcheck:
-#      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
 
   # Redis 캐시
   redis:
@@ -84,11 +50,6 @@ services :
       POSTGRES_USER : ${POSTGRES_USER}
       POSTGRES_PASSWORD : ${POSTGRES_PASSWORD}
       POSTGRES_DB : ${POSTGRES_DB}
-#      POSTGRES_REPLICA_HOST: ${POSTGRES_REPLICA_HOST}
-#      POSTGRES_REPLICA_PORT: ${POSTGRES_REPLICA_PORT}
-#      POSTGRES_REPLICA_USER: ${POSTGRES_REPLICA_USER}
-#      POSTGRES_REPLICA_PASSWORD: ${POSTGRES_REPLICA_PASSWORD}
-#      POSTGRES_REPLICA_DB: ${POSTGRES_REPLICA_DB}
       REDIS_HOST : ${REDIS_HOST}
       REDIS_PORT : ${REDIS_PORT}
       ENABLE_PROFILING : "false"  # cProfile 미사용 / 사용
@@ -97,8 +58,6 @@ services :
     depends_on:
       postgres :
         condition : service_healthy
-#      postgres-replica:
-#        condition: service_healthy
       redis :
         condition : service_healthy
     restart: on-failure
@@ -114,19 +73,12 @@ services :
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-#      POSTGRES_REPLICA_HOST: ${POSTGRES_REPLICA_HOST}
-#      POSTGRES_REPLICA_PORT: ${POSTGRES_REPLICA_PORT}
-#      POSTGRES_REPLICA_USER: ${POSTGRES_REPLICA_USER}
-#      POSTGRES_REPLICA_PASSWORD: ${POSTGRES_REPLICA_PASSWORD}
-#      POSTGRES_REPLICA_DB: ${POSTGRES_REPLICA_DB}
       POSTGRES_DB: ${POSTGRES_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
-#      postgres-replica:
-#        condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
@@ -143,18 +95,11 @@ services :
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-#      POSTGRES_REPLICA_HOST: ${POSTGRES_REPLICA_HOST}
-#      POSTGRES_REPLICA_PORT: ${POSTGRES_REPLICA_PORT}
-#      POSTGRES_REPLICA_USER: ${POSTGRES_REPLICA_USER}
-#      POSTGRES_REPLICA_PASSWORD: ${POSTGRES_REPLICA_PASSWORD}
-#      POSTGRES_REPLICA_DB: ${POSTGRES_REPLICA_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
-#      postgres-replica:
-#        condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
@@ -171,18 +116,11 @@ services :
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-#      POSTGRES_REPLICA_HOST: ${POSTGRES_REPLICA_HOST}
-#      POSTGRES_REPLICA_PORT: ${POSTGRES_REPLICA_PORT}
-#      POSTGRES_REPLICA_USER: ${POSTGRES_REPLICA_USER}
-#      POSTGRES_REPLICA_PASSWORD: ${POSTGRES_REPLICA_PASSWORD}
-#      POSTGRES_REPLICA_DB: ${POSTGRES_REPLICA_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
-#      postgres-replica:
-#        condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
@@ -199,18 +137,11 @@ services :
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-#      POSTGRES_REPLICA_HOST: ${POSTGRES_REPLICA_HOST}
-#      POSTGRES_REPLICA_PORT: ${POSTGRES_REPLICA_PORT}
-#      POSTGRES_REPLICA_USER: ${POSTGRES_REPLICA_USER}
-#      POSTGRES_REPLICA_PASSWORD: ${POSTGRES_REPLICA_PASSWORD}
-#      POSTGRES_REPLICA_DB: ${POSTGRES_REPLICA_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
     depends_on:
       postgres:
         condition: service_healthy
-#      postgres-replica:
-#        condition: service_healthy
       redis:
         condition: service_healthy
     restart: on-failure
@@ -237,7 +168,6 @@ services :
 # 볼륨 정의 (데이터 영속성)
 volumes :
   postgres-data:
-  #postgres-data-replica:
 
 # 네트워크
 networks:

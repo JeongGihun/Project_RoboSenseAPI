@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.database import get_replica_db
+from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData, Robot
 from sqlalchemy import select, func, case
@@ -73,7 +73,7 @@ async def calculate_stats(
 async def get_stats(
         start_time : Optional[datetime] = None,
         end_time : Optional[datetime] = None,
-        db : AsyncSession = Depends(get_replica_db)) :
+        db : AsyncSession = Depends(get_db)) :
 
     # redis 가져오기
     redis = get_redis()
