@@ -25,7 +25,8 @@ Python과 C++ 병합
 - '26. 02. 27 : 워커 병렬 도입 (2개)
 - '26. 02. 28 : keepalive 설정
 - '26. 02. 28 ~ '26. 03. 06 : 워커 병렬 실행, asyncpg 도입 [TPS : 1,010]
-- '26. 03. 07 ~ '26. 03. 15 : read_replica + synchronous_commit 도입 -> TPS 오히려 하락해서 제거
+- '26. 03. 07 ~ '26. 03. 14 : read_replica + synchronous_commit 도입 -> TPS 오히려 하락해서 제거
+- '26. 03. 15. : AWS EC2 배포 최초 성공
 
 ## 주요 기능
 - POST /api/sensors - 센서 데이터 수집
@@ -73,6 +74,12 @@ docker-compose down (삭제)
 docker-compose ps (상태 조회)
 docker-compose logs -f fastapi-1 (특정 서비스)
 locust -f test/locustfile.py --host=http://localhost (Locust)
+```
+
+### 7. AWS EC2 배포
+```
+ssh -i "키파일경로" ubuntu@퍼블릭IP (접속)
+docker compose up -d --build (생성)
 ```
 
 ## 프로젝트 구조
