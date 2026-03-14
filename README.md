@@ -78,6 +78,7 @@ locust -f test/locustfile.py --host=http://localhost (Locust)
 
 ### 7. AWS EC2 배포
 ```
+My IP 확인 및 수정
 ssh -i "키파일경로" ubuntu@퍼블릭IP (접속)
 docker compose up -d --build (생성)
 ```
