@@ -175,8 +175,8 @@ def sensor_to_tuple(sensor:SensorData) -> tuple :
 
 async def batch_commit_worker():
     """1초마다 큐에서 꺼내서 일괄 커밋"""
-
-    while True:
+    flag = True
+    while flag:
         try:
             await asyncio.sleep(0.5)
 
@@ -185,7 +185,11 @@ async def batch_commit_worker():
 
             for _ in range(count) :
                 try :
-                    batch.append(sensor_queue.get_nowait())
+                    data = sensor_queue.get_nowait()
+                    if data is None :
+                        flag = False
+                        break
+                    batch.append(data)
                 except asyncio.QueueEmpty :
                     break
 
@@ -200,3 +204,4 @@ async def batch_commit_worker():
 
         except Exception as e:
             logger.error(f"배치 커밋 실패: {str(e)}")
+    logger.info("batch_commit_worker 정상 종료")

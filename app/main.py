@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from app.routes import sensor_routes, robot_routes, stats_routes
-from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool
+from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool, get_asyncpg_pool
 from app.middleware import RequestIDMiddleware
 from app.logging_config import RequestIDFilter
 from contextlib import asynccontextmanager
-from app.redis_client import connect_redis, close_redis
+from app.redis_client import connect_redis, close_redis, get_redis
 import asyncio, logging
 from app.context import request_id
 from fastapi.responses import JSONResponse
+from app.utils.retry import retry_connect
 
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter("%(request_id)s %(asctime)s [%(levelname)s] %(message)s"))
@@ -27,11 +28,16 @@ async def lifespan(app: FastAPI):
             await conn.run_sync(Base.metadata.create_all)
     except Exception:
         pass
-    await connect_redis()
-    await init_asyncpg_pool()
+    await retry_connect(connect_redis, "Redis")
+    await retry_connect(init_asyncpg_pool, "PostgreSQL")
+    task_list = []
     for _ in range(2):
-        asyncio.create_task(sensor_routes.batch_commit_worker())
+        task = asyncio.create_task(sensor_routes.batch_commit_worker())
+        task_list.append(task)
     yield
+    for _ in range(2) :
+        await sensor_routes.sensor_queue.put(None)
+    await asyncio.gather(*task_list)
     await close_asyncpg_pool()
     await close_redis()
 
@@ -55,8 +61,30 @@ def root() :
     return {"message" : "Hi"}
 
 @app.get("/health_check")
-def health() :
-    return {"health" : "Ok"}
+async def health() :
+    db_ok = False
+    redis_ok = False
+
+    try :
+        async with get_asyncpg_pool().acquire() as conn :
+            await conn.fetchval("SELECT 1")
+        db_ok = True
+    except :
+        pass
+
+    try :
+        await get_redis().ping()
+        redis_ok = True
+    except :
+        pass
+
+    if db_ok and redis_ok:
+        return {"status": "healthy", "db": db_ok, "redis": redis_ok}
+    else:
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unhealthy", "db": db_ok, "redis": redis_ok}
+        )
 
 @app.exception_handler(Exception)
 async def exception_handler(request, exc) :
