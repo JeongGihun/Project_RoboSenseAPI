@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from app.routes import sensor_routes, robot_routes, stats_routes
 from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool, get_asyncpg_pool
 from app.middleware import RequestIDMiddleware
 from app.logging_config import RequestIDFilter
 from contextlib import asynccontextmanager
 from app.redis_client import connect_redis, close_redis, get_redis
-import asyncio, logging
+import asyncio, logging, os
 from app.context import request_id
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from app.utils.retry import retry_connect
 
 handler = logging.StreamHandler()
@@ -51,14 +52,25 @@ app = FastAPI(
 # 미들웨어는 코드 순서의 역순. 주의.
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(RequestIDMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(sensor_routes.router)
 app.include_router(robot_routes.router)
 app.include_router(stats_routes.router)
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def root() :
-    return {"message" : "Hi"}
+    index_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "index.html")
+    try :
+        with open(index_path, "r", encoding="utf-8") as f :
+            return HTMLResponse(content=f.read())
+    except FileNotFoundError :
+        return HTMLResponse(content="<h1>RoboSense API</h1><p>Landing page not found.</p>")
 
 @app.get("/health_check")
 async def health() :
