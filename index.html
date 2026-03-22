@@ -228,7 +228,7 @@ footer a:hover{text-decoration:underline}
             <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
             <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
             <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
-            <div>Interval: <select id="autoInterval" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:.15rem .4rem;font-size:.78rem;"><option value="500">0.5s</option><option value="1000" selected>1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div>
+            <div>Interval: <select id="autoInterval" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:.15rem .4rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div>
           </div>
         </div>
         <div class="response-box" id="resp-post-sensor"></div>
@@ -237,7 +237,7 @@ footer a:hover{text-decoration:underline}
     <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/sensors</span><span class="endpoint-desc">센서 데이터 목록</span><span class="endpoint-toggle">&#9660;</span></div>
       <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-get-sensor"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
         <div class="try-it-title">Try it</div>
-        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="sensor-list-robot-id"></div><div class="form-group"><label>Type</label><select id="sensor-list-type"><option value="">전체</option><option value="IMU">IMU</option><option value="GPS">GPS</option><option value="LiDAR">LiDAR</option></select></div><div class="form-group"><label>Limit</label><input type="number" id="sensor-list-limit" value="10"></div></div>
+        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="sensor-list-robot-id" min="1"></div><div class="form-group"><label>Type</label><select id="sensor-list-type"><option value="">전체</option><option value="IMU">IMU</option><option value="GPS">GPS</option><option value="LiDAR">LiDAR</option></select></div><div class="form-group"><label>Limit</label><input type="number" id="sensor-list-limit" value="10"></div></div>
         <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getSensors()">Send Request</button></div>
         <div class="response-box" id="resp-get-sensors"></div>
       </div></div>
@@ -370,10 +370,14 @@ function sendAutoTick(){
   }).catch(function(){autoErrN++;document.getElementById('autoErrors').textContent=autoErrN;});
 }
 
-function getSensors(){showLoad('resp-get-sensors');var p=[],rid=document.getElementById('sensor-list-robot-id').value,st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid)p.push('robot_id='+rid);if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/api/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
+function getSensors(){showLoad('resp-get-sensors');var p=[],rid=parseInt(document.getElementById('sensor-list-robot-id').value),st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid&&rid>0)p.push('robot_id='+rid);else if(rid&&rid<=0){showErr('resp-get-sensors','Robot ID는 1 이상이어야 합니다');return;}if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/api/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
 function getFiltered(){showLoad('resp-get-filtered');api('GET','/api/sensors/filtered?robot_id='+document.getElementById('filter-robot-id').value+'&sensor_type='+document.getElementById('filter-sensor-type').value+'&field='+document.getElementById('filter-field').value+'&window_size='+document.getElementById('filter-window').value).then(function(r){showResp('resp-get-filtered',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-filtered',e.message);});}
 function getStats(){showLoad('resp-get-stats');var p=[],s=document.getElementById('stats-start').value,e=document.getElementById('stats-end').value;if(s)p.push('start_time='+new Date(s).toISOString());if(e)p.push('end_time='+new Date(e).toISOString());api('GET','/api/stats'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-stats',r.status,r.data,r.ms);}).catch(function(e2){showErr('resp-get-stats',e2.message);});}
 function healthCheck(){showLoad('resp-health');api('GET','/health_check').then(function(r){showResp('resp-health',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-health',e.message);});}
+function toLocal(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
+var pageLoad=new Date();
+document.getElementById('stats-start').value=toLocal(pageLoad);
+document.getElementById('stats-end').value=toLocal(new Date(pageLoad.getTime()+3600000));
 fetch(B+'/api/robots').then(function(r){return r.json();}).then(function(d){if(Array.isArray(d)&&d.length){R=d.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(){});
 </script>
 </body>
