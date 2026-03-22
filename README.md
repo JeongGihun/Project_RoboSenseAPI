@@ -26,18 +26,23 @@ Python과 C++ 병합
 - '26. 02. 28 : keepalive 설정
 - '26. 02. 28 ~ '26. 03. 06 : 워커 병렬 실행, asyncpg 도입 [TPS : 1,010]
 - '26. 03. 07 ~ '26. 03. 14 : read_replica + synchronous_commit 도입 -> TPS 오히려 하락해서 제거
-- '26. 03. 15. : AWS EC2 배포 최초 성공
+- '26. 03. 15 : AWS EC2 배포 최초 성공
+- '26. 03. 22 : 인터랙티브 API 랜딩페이지 배포, 데이터 초기화 엔드포인트 추가
 
 ## 주요 기능
-- POST /api/sensors - 센서 데이터 수집
-- GET /api/sensors - 센서 데이터 조회 및 필터링
-- GET /api/sensors?robot_id={id} - 특정 로봇 센서 조회
-- GET /api/sensors?sensor_type={type} - 센서 타입별 조회
-- POST /api/robots - 로봇 등록
-- GET /api/robots - 로봇 목록 조회
-- GET /api/robots/{id} - 특정 로봇 목록 조회
-- GET /api/stats - 최근 1시간 통계 조회
-- GET /api/sensors/filtered?robot_id={id}&sensor_type={type}&field={field}&window_size=5 - 최근 5초간 이동평균 조회
+
+| Method | Endpoint | 설명 |
+|--------|----------|------|
+| POST | `/api/robots` | 로봇 등록 |
+| GET | `/api/robots` | 로봇 목록 조회 (status 필터 지원) |
+| GET | `/api/robots/{id}` | 특정 로봇 상세 조회 (최근 센서 포함) |
+| PUT | `/api/robots/{id}` | 로봇 상태/배터리 업데이트 |
+| POST | `/api/sensors` | 센서 데이터 수집 |
+| GET | `/api/sensors` | 센서 데이터 조회 (커서 기반 페이징) |
+| GET | `/api/sensors/{id}` | 특정 센서 데이터 조회 |
+| GET | `/api/sensors/filtered` | 이동평균 필터링 (robot_id, sensor_type, field, window_size) |
+| GET | `/stats` | 통계 조회 (start_time, end_time) |
+| DELETE | `/api/reset` | 전체 데이터 초기화 (로봇 + 센서 + 캐시) |
 
 ## 실행 방법
 
@@ -69,10 +74,10 @@ locust -f test/locustfile.py --host=http://localhost:8000
 
 ### 6. Docker 도입 이후
 ```
-docker-compose up -d --build (생성)
-docker-compose down (삭제)
-docker-compose ps (상태 조회)
-docker-compose logs -f fastapi-1 (특정 서비스)
+docker compose up -d --build (생성)
+docker compose down (삭제)
+docker compose ps (상태 조회)
+docker compose logs -f fastapi-1 (특정 서비스)
 locust -f test/locustfile.py --host=http://localhost (Locust)
 ```
 
@@ -88,21 +93,26 @@ docker compose up -d --build (생성)
 RobosenseAPI/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPI 애플리케이션
+│   ├── main.py                 # FastAPI 앱 (랜딩페이지 서빙 포함)
 │   ├── database.py             # DB 연결 및 세션 관리
 │   ├── redis_client.py         # Redis 클라이언트
+│   ├── context.py              # 컨텍스트 관리
+│   ├── middleware.py            # 미들웨어
+│   ├── logging_config.py        # 로깅 설정
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── db_models.py        # SQLAlchemy ORM 모델
 │   │   ├── sensor.py           # 센서 Pydantic 스키마
 │   │   ├── robot.py            # 로봇 Pydantic 스키마
 │   │   └── enum.py             # Enum 타입 정의
-│   └── routes/
-│       ├── __init__.py
-│       ├── sensor_routes.py    # 센서 데이터 API
-│       ├── robot_routes.py     # 로봇 관리 API
-│       └── stats_routes.py     # 통계 API
-├── cpp_modules/                # C++ 모듈
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── sensor_routes.py    # 센서 데이터 API
+│   │   ├── robot_routes.py     # 로봇 관리 API
+│   │   └── stats_routes.py     # 통계 API
+│   └── utils/
+│       └── retry.py            # 재시도 유틸리티
+├── cpp_modules/                # C++ 연산 모듈
 │   └── sensor_cpp/
 │       ├── sensor.cpp          # C++ 직렬화 & 필터링 & 통계 계산
 │       ├── sensor.h            # 헤더 파일
@@ -112,54 +122,50 @@ RobosenseAPI/
 │           └── test_bindings.py        # Catch2 테스트 (참고용)
 ├── scripts/
 │   ├── quick_mock.py           # Mock 데이터 생성
-│   └── db_test.py              # DB 쿼리 테스트
-├── tests/
-│   └── locustfile.py           # 부하 테스트 시나리오
-├── .venv/                      # 가상환경 (gitignore)
+│   ├── mock_data.py            # Mock 데이터 스크립트
+│   └── reset_db.py             # DB 초기화 스크립트
+├── test/
+│   ├── locustfile.py           # Locust 부하 테스트
+│   ├── puttest.py              # PUT 테스트
+│   └── test_single_request.py  # 단일 요청 테스트
+├── postgres/
+│   └── primary/
+│       ├── postgresql.conf     # PostgreSQL 설정
+│       └── pg_hba.conf         # PostgreSQL 인증 설정
+├── images/                     # 아키텍처 다이어그램 등
+├── index.html                  # 인터랙티브 API 랜딩페이지
 ├── Dockerfile                  # FastAPI 이미지 빌드
 ├── docker-compose.yml          # 전체 시스템 구성
 ├── nginx.conf                  # Nginx 로드 밸런서 설정
-├── .dockerignore
+├── performance_test.py         # 성능 테스트
 ├── requirements.txt            # Python 의존성
-├── .env                        # 환경 변수 (gitignore)
+├── .env / .env.docker          # 환경 변수 (gitignore)
+├── .dockerignore
 ├── .gitignore
 └── README.md
 ```
 ## 시스템 아키텍처
-```
-Client / Locust
-    ↓
-Nginx (Port 80) - Load Balancer
-    ↓ (round-robin)
-    ├─ FastAPI-1 (8000)
-    ├─ FastAPI-2 (8000)
-    ├─ FastAPI-3 (8000)
-    ├─ FastAPI-4 (8000)
-    └─ FastAPI-5 (8000)
-         ↓
-    PostgreSQL (5432) - Persistent Storage
-    Redis (6379) - Cache Layer
-```
 
-**컨테이너 구성:**
-- Nginx: 1개 (로드 밸런서)
-- FastAPI: 5개 (애플리케이션 서버)
+![System Architecture](images/architecture.svg)
+
+**컨테이너 구성 (총 8개):**
+- Nginx: 1개 (리버스 프록시 / 로드 밸런서)
+- FastAPI: 5개 (애플리케이션 서버, 각 Uvicorn 워커 2개)
 - PostgreSQL: 1개 (데이터베이스)
-- Redis: 1개 (캐시)
+- Redis: 1개 (캐시 레이어)
 
 ## 기술 스택 / 사용 Tool
-- Python (3.11)
-- C++ (17)
-- FastAPI
-- Uvicorn
-- PostgreSQL (16)
-- SQLAlchemy
-- Docker
-- Locust
+- Python (3.11) / C++ (17)
+- FastAPI + Uvicorn
+- PostgreSQL (16) + SQLAlchemy (Async)
 - Redis (7.1.0)
-- Py-spy
+- Nginx (리버스 프록시 / 로드 밸런서)
+- Docker / Docker Compose
 - Pybind11 (Python-C++ 바인딩)
+- Locust (부하 테스트)
+- Py-spy (프로파일링)
 - Pytest
+- AWS EC2 (배포)
 
 ## 부하 테스트
 - Week 10 ('26. 01. 04.)
@@ -256,10 +262,6 @@ Python 결과 : 940 ~ 1100ms / Fail (0%)
 - 16주차 : C++과 연동하면서 갑자기 어려운 지점들이 나와 쉽지 않았다. 다행히 설날이 겹쳐 많은 시간을 투자했더니, 어느 정도 이해가 되는 부분이 많았다. 놀란 부분은 내가 이론적으로 알고 있던 속도 차이가 실제로 일어났을때다. 전체적으로 29%에다 User도 100으로 설정했으니 C++의 장점을 분명히 알 수 있었다. 물론 Python의 연산에서 중요한 부분은 C++로 실행하지만, 세밀한 옵션에 차이를 두면 좋다는 것도 깨닫았다.
 
 - 19주차 : 서버를 늘리거나, 부하를 줄이는 등 어려운 기술을 도입하면 조금씩이나마 올라갈 것이란 생각과 다르게 오히려 성능이 하락을 했다. 개발자로서 단순 기술 도입만이 아닌 현 상황과 아키텍쳐를 파악하고 그에 맞는 기술을 도입하는 것이 진정 실력이 있는 사람이란 것을 깨닫았다. 앞으로는 배포와 최적화에 좀 더 비중을 두고 작업해야겠다.
-
-
-
-
 
 
 
