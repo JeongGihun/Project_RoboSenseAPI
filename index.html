@@ -179,7 +179,7 @@ footer a:hover{text-decoration:underline}
         <div class="try-it"><div class="try-it-title">Try it</div>
           <div class="form-row"><div class="form-group"><label>Name</label><input type="text" id="robot-name" value="TestBot-1"></div><div class="form-group"><label>Model</label><input type="text" id="robot-model" value="Warehouse-Bot-v2"></div></div>
           <div class="form-row"><div class="form-group"><label>Status</label><select id="robot-status"><option value="active">active</option><option value="inactive">inactive</option><option value="maintenance">maintenance</option></select></div><div class="form-group"><label>Battery</label><input type="number" id="robot-battery" min="0" max="100" value="100"></div></div>
-          <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postRobot()">Send Request</button></div>
+          <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postRobot()">Send Request</button><button class="btn btn-sm btn-orange" onclick="autoGenRobots()">&#9889; 로봇 10개 자동 생성</button></div>
           <div class="response-box" id="resp-post-robot"></div>
         </div>
         <h5 style="margin-top:1.25rem;">Registered Robots</h5>
@@ -213,16 +213,24 @@ footer a:hover{text-decoration:underline}
     <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-post">POST</span><span class="endpoint-path">/api/sensors</span><span class="endpoint-desc">센서 데이터 수집</span><span class="endpoint-toggle">&#9660;</span></div>
       <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-post-sensor"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
         <div class="try-it-title">Try it</div>
-        <div class="form-row"><div class="form-group" style="flex:3;"><label>Request Body (JSON)</label><textarea id="sensor-body" rows="8">{
+        <div class="form-row"><div class="form-group" style="flex:3;"><label>Request Body (JSON)</label><textarea id="sensor-body" rows="10">{
   "robot_id": 1,
   "timestamp": "2026-03-21T10:30:00",
   "sensors": [
-    {"sensor_type": "IMU", "data": {"acceleration": {"x": 1.2, "y": -0.5, "z": 9.8}}},
-    {"sensor_type": "GPS", "data": null},
+    {"sensor_type": "IMU", "data": {"acceleration": {"x": 1.2, "y": -0.5, "z": 9.8}, "gyroscope": {"x": 0.01, "y": -0.02, "z": 0.005}}},
+    {"sensor_type": "GPS", "data": {"latitude": 37.5665, "longitude": 126.978}},
     {"sensor_type": "LiDAR", "data": {"distance": 3.5, "angle": 45}}
   ]
 }</textarea></div></div>
-        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button></div>
+        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button><button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button><span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);"></span></div>
+        <div id="autoStats" style="display:none;margin-top:.75rem;padding:.75rem 1rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
+          <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+            <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
+            <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
+            <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
+            <div>Interval: <select id="autoInterval" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:.15rem .4rem;font-size:.78rem;"><option value="500">0.5s</option><option value="1000" selected>1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div>
+          </div>
+        </div>
         <div class="response-box" id="resp-post-sensor"></div>
       </div></div>
     </div>
@@ -287,12 +295,81 @@ function showErr(id,m){var b=document.getElementById(id);b.className='response-b
 function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
 function unlock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.add('unlocked');});}
 function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML=R.map(function(r){return'<div class="robot-chip"><span class="chip-id">#'+r.id+'</span><span class="chip-name">'+r.name+'</span></div>';}).join('');}
+var MODELS=['Warehouse-Bot-v2','Patrol-Bot-X1','Cargo-Mover-3K','Scout-Mini','HeavyLift-900','SpeedRunner-S','Inspector-Pro','CleanBot-Z','Picker-Alpha','Navigator-V5'];
+var autoTimer=null,autoSentN=0,autoErrN=0,autoTotalMs=0;
+
 function postRobot(){showLoad('resp-post-robot');api('POST','/api/robots',{name:document.getElementById('robot-name').value,model:document.getElementById('robot-model').value,status:document.getElementById('robot-status').value,battery_level:parseInt(document.getElementById('robot-battery').value)}).then(function(r){showResp('resp-post-robot',r.status,r.data,r.ms);if(r.status===201){R.push({id:r.data.id,name:r.data.name});updateRL();unlock();}}).catch(function(e){showErr('resp-post-robot',e.message);});}
+
+function autoGenRobots(){
+  showLoad('resp-post-robot');
+  var count=0,ok=0,err=0,results=[];
+  function next(){
+    if(count>=10){
+      var msg={generated:ok,errors:err,robots:results};
+      showResp('resp-post-robot',ok>0?201:500,msg,0);
+      if(ok>0){updateRL();unlock();}
+      return;
+    }
+    var i=count;count++;
+    var statuses=['active','active','active','active','active','active','active','inactive','maintenance','active'];
+    api('POST','/api/robots',{name:'Robot-'+String.fromCharCode(65+i),model:MODELS[i],status:statuses[i],battery_level:Math.floor(60+Math.random()*40)}).then(function(r){
+      if(r.status===201){ok++;R.push({id:r.data.id,name:r.data.name});results.push({id:r.data.id,name:r.data.name});}else{err++;}
+      next();
+    }).catch(function(){err++;next();});
+  }
+  next();
+}
+
 function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/api/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}
 function getRobotDetail(){showLoad('resp-get-robot-detail');api('GET','/api/robots/'+document.getElementById('robot-detail-id').value).then(function(r){showResp('resp-get-robot-detail',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-robot-detail',e.message);});}
 function putRobot(){showLoad('resp-put-robot');var id=document.getElementById('robot-update-id').value;api('PUT','/api/robots/'+id,{status:document.getElementById('robot-update-status').value,battery_level:parseInt(document.getElementById('robot-update-battery').value)}).then(function(r){showResp('resp-put-robot',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-put-robot',e.message);});}
 function postSensor(){showLoad('resp-post-sensor');try{api('POST','/api/sensors',JSON.parse(document.getElementById('sensor-body').value)).then(function(r){showResp('resp-post-sensor',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-post-sensor',e.message);});}catch(e){showErr('resp-post-sensor','Invalid JSON');}}
-function fillSample(){var now=new Date().toISOString().slice(0,19);document.getElementById('sensor-body').value=JSON.stringify({robot_id:1,timestamp:now,sensors:[{sensor_type:"IMU",data:{acceleration:{x:+(Math.random()*2).toFixed(2),y:+(Math.random()*-1).toFixed(2),z:9.8}}},{sensor_type:"GPS",data:null},{sensor_type:"LiDAR",data:{distance:+(Math.random()*10).toFixed(1),angle:Math.floor(Math.random()*360)}}]},null,2);}
+
+function genSensorData(rid){
+  var now=new Date().toISOString().slice(0,19);
+  return {robot_id:rid,timestamp:now,sensors:[
+    {sensor_type:"IMU",data:{acceleration:{x:+(Math.random()*4-2).toFixed(2),y:+(Math.random()*4-2).toFixed(2),z:+(9.5+Math.random()*0.6).toFixed(2)},gyroscope:{x:+(Math.random()*2-1).toFixed(3),y:+(Math.random()*2-1).toFixed(3),z:+(Math.random()*2-1).toFixed(3)}}},
+    {sensor_type:"GPS",data:Math.random()>0.15?{latitude:+(37.5+Math.random()*0.01).toFixed(6),longitude:+(127.0+Math.random()*0.01).toFixed(6)}:null},
+    {sensor_type:"LiDAR",data:{distance:+(Math.random()*15).toFixed(1),angle:Math.floor(Math.random()*360)}}
+  ]};
+}
+
+function fillSample(){
+  var rid=R.length?R[Math.floor(Math.random()*R.length)].id:1;
+  document.getElementById('sensor-body').value=JSON.stringify(genSensorData(rid),null,2);
+}
+
+function toggleAuto(){
+  if(autoTimer){stopAuto();return;}
+  if(!R.length){showErr('resp-post-sensor','로봇을 먼저 등록하세요');return;}
+  autoSentN=0;autoErrN=0;autoTotalMs=0;
+  document.getElementById('autoBtn').innerHTML='&#9724; Stop';
+  document.getElementById('autoBtn').className='btn btn-sm btn-orange';
+  document.getElementById('autoStats').style.display='block';
+  document.getElementById('autoStatus').textContent='Running...';
+  sendAutoTick();
+  autoTimer=setInterval(sendAutoTick,parseInt(document.getElementById('autoInterval').value)||1000);
+}
+function stopAuto(){
+  clearInterval(autoTimer);autoTimer=null;
+  document.getElementById('autoBtn').innerHTML='&#9654; Auto Mode';
+  document.getElementById('autoBtn').className='btn btn-sm btn-green';
+  document.getElementById('autoStatus').textContent='Stopped ('+autoSentN+' sent)';
+}
+function sendAutoTick(){
+  var rid=R[Math.floor(Math.random()*R.length)].id;
+  var data=genSensorData(rid);
+  document.getElementById('sensor-body').value=JSON.stringify(data,null,2);
+  api('POST','/api/sensors',data).then(function(r){
+    autoSentN++;
+    if(r.status>=200&&r.status<300){autoTotalMs+=r.ms;}else{autoErrN++;}
+    document.getElementById('autoSent').textContent=autoSentN;
+    document.getElementById('autoErrors').textContent=autoErrN;
+    document.getElementById('autoAvg').textContent=autoSentN?Math.round(autoTotalMs/autoSentN)+'ms':'0ms';
+    showResp('resp-post-sensor',r.status,r.data,r.ms);
+  }).catch(function(){autoErrN++;document.getElementById('autoErrors').textContent=autoErrN;});
+}
+
 function getSensors(){showLoad('resp-get-sensors');var p=[],rid=document.getElementById('sensor-list-robot-id').value,st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid)p.push('robot_id='+rid);if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/api/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
 function getFiltered(){showLoad('resp-get-filtered');api('GET','/api/sensors/filtered?robot_id='+document.getElementById('filter-robot-id').value+'&sensor_type='+document.getElementById('filter-sensor-type').value+'&field='+document.getElementById('filter-field').value+'&window_size='+document.getElementById('filter-window').value).then(function(r){showResp('resp-get-filtered',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-filtered',e.message);});}
 function getStats(){showLoad('resp-get-stats');var p=[],s=document.getElementById('stats-start').value,e=document.getElementById('stats-end').value;if(s)p.push('start_time='+new Date(s).toISOString());if(e)p.push('end_time='+new Date(e).toISOString());api('GET','/api/stats'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-stats',r.status,r.data,r.ms);}).catch(function(e2){showErr('resp-get-stats',e2.message);});}
