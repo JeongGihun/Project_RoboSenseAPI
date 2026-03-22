@@ -111,22 +111,31 @@
   <rect x="705" y="315" width="130" height="24" rx="5" fill="url(#cppGrad)" filter="url(#shadow)"/>
   <text x="770" y="331" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">C++ (Pybind11)</text>
 
-  <!-- ============ Single arrows to data layer ============ -->
-  <!-- Arrow: FastAPI group → PostgreSQL (single) -->
-  <line x1="330" y1="339" x2="330" y2="415" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
-  <text x="295" y="382" fill="#60a5fa" font-size="10" font-weight="600">Async</text>
+  <!-- ============ Vertical lines from each C++ module down to bus ============ -->
+  <line x1="140" y1="339" x2="140" y2="370" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="290" y1="339" x2="290" y2="370" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="450" y1="339" x2="450" y2="370" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="610" y1="339" x2="610" y2="370" stroke="#94a3b8" stroke-width="1.5"/>
+  <line x1="770" y1="339" x2="770" y2="370" stroke="#94a3b8" stroke-width="1.5"/>
 
-  <!-- Arrow: FastAPI group → Redis (single) -->
-  <line x1="630" y1="339" x2="630" y2="415" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrowRed)"/>
-  <text x="645" y="385" fill="#f87171" font-size="10" font-weight="600">Cache</text>
+  <!-- Horizontal bus line -->
+  <line x1="140" y1="370" x2="770" y2="370" stroke="#94a3b8" stroke-width="2.5"/>
+
+  <!-- Arrow: bus → PostgreSQL -->
+  <line x1="330" y1="370" x2="330" y2="420" stroke="#60a5fa" stroke-width="2.5" marker-end="url(#arrowBlue)"/>
+  <text x="295" y="400" fill="#60a5fa" font-size="10" font-weight="600">Async</text>
+
+  <!-- Arrow: bus → Redis -->
+  <line x1="630" y1="370" x2="630" y2="420" stroke="#f87171" stroke-width="2.5" marker-end="url(#arrowRed)"/>
+  <text x="645" y="400" fill="#f87171" font-size="10" font-weight="600">Cache</text>
 
   <!-- ============ POSTGRESQL ============ -->
-  <rect x="200" y="415" width="260" height="60" rx="10" fill="url(#pgGrad)" filter="url(#shadow)"/>
-  <text x="330" y="441" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">PostgreSQL</text>
-  <text x="330" y="463" text-anchor="middle" fill="#bfdbfe" font-size="10">Port 5432 · Persistent Storage</text>
+  <rect x="200" y="420" width="260" height="60" rx="10" fill="url(#pgGrad)" filter="url(#shadow)"/>
+  <text x="330" y="446" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">PostgreSQL</text>
+  <text x="330" y="468" text-anchor="middle" fill="#bfdbfe" font-size="10">Port 5432 · Persistent Storage</text>
 
   <!-- ============ REDIS ============ -->
-  <rect x="500" y="415" width="260" height="60" rx="10" fill="url(#redisGrad)" filter="url(#shadow)"/>
-  <text x="630" y="441" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">Redis</text>
-  <text x="630" y="463" text-anchor="middle" fill="#fecaca" font-size="10">Port 6379 · Cache Layer</text>
+  <rect x="500" y="420" width="260" height="60" rx="10" fill="url(#redisGrad)" filter="url(#shadow)"/>
+  <text x="630" y="446" text-anchor="middle" fill="#fff" font-size="14" font-weight="700">Redis</text>
+  <text x="630" y="468" text-anchor="middle" fill="#fecaca" font-size="10">Port 6379 · Cache Layer</text>
 </svg>
