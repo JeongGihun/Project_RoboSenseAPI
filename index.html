@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoboSense API</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root{--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3a;--accent:#6366f1;--accent-light:#818cf8;--accent-glow:rgba(99,102,241,0.15);--green:#10b981;--green-glow:rgba(16,185,129,0.15);--orange:#f59e0b;--orange-glow:rgba(245,158,11,0.15);--red:#ef4444;--cyan:#06b6d4;--cyan-glow:rgba(6,182,212,0.15);--text:#e2e8f0;--text-muted:#94a3b8;--text-dim:#64748b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);top:-200px;left:50%;transform:translateX(-50%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:.5rem;padding:.4rem 1rem;background:var(--surface2);border:1px solid var(--border);border-radius:100px;font-size:.8rem;color:var(--accent-light);margin-bottom:1.5rem}
+.hero-badge span{color:var(--green)}
+.hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;margin-bottom:1rem;background:linear-gradient(135deg,#fff 0%,var(--accent-light) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{max-width:600px;font-size:1.15rem;color:var(--text-muted);margin-bottom:2.5rem}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.75rem 1.8rem;border-radius:10px;font-size:.95rem;font-weight:600;text-decoration:none;transition:all .2s;cursor:pointer;border:none}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 30px var(--accent-glow)}
+.btn-primary:hover{background:var(--accent-light);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent-light)}
+.btn-sm{padding:.5rem 1.2rem;font-size:.82rem;border-radius:8px}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#0ea572}
+.btn-orange{background:var(--orange);color:#000}
+.btn-orange:hover{background:#d97706}
+.section{padding:5rem 2rem;max-width:1100px;margin:0 auto}
+.section-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent-light);margin-bottom:.5rem}
+.section-title{font-size:2rem;font-weight:700;margin-bottom:.75rem}
+.section-desc{color:var(--text-muted);max-width:650px;margin-bottom:3rem}
+.server-status{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;background:var(--surface);border:1px solid var(--border);border-radius:100px;font-size:.82rem;margin-bottom:2rem}
+.status-dot{width:8px;height:8px;border-radius:50%}
+.status-dot.online{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s infinite}
+.status-dot.offline{background:var(--red);box-shadow:0 0 8px var(--red)}
+.status-dot.checking{background:var(--orange);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.arch-diagram{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2.5rem;display:flex;align-items:center;justify-content:center;gap:1rem;flex-wrap:wrap}
+.arch-node{text-align:center;padding:1rem 1.5rem;border-radius:12px;min-width:120px;font-size:.85rem;font-weight:600}
+.arch-node small{display:block;font-weight:400;color:var(--text-muted);font-size:.75rem;margin-top:.25rem}
+.node-robot{background:var(--cyan-glow);border:1px solid rgba(6,182,212,.3);color:var(--cyan)}
+.node-nginx{background:var(--orange-glow);border:1px solid rgba(245,158,11,.3);color:var(--orange)}
+.node-api{background:var(--accent-glow);border:1px solid rgba(99,102,241,.3);color:var(--accent-light)}
+.node-redis{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3);color:var(--red)}
+.node-pg{background:var(--green-glow);border:1px solid rgba(16,185,129,.3);color:var(--green)}
+.arch-arrow{color:var(--text-dim);font-size:1.5rem}
+.tech-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:2rem}
+.tech-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.25rem;transition:border-color .2s}
+.tech-card:hover{border-color:var(--accent)}
+.tech-card h4{font-size:.9rem;margin-bottom:.35rem}
+.tech-card p{font-size:.8rem;color:var(--text-muted)}
+.flow-banner{background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(239,68,68,.08));border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:1.25rem 1.75rem;display:flex;align-items:center;gap:1rem;margin-bottom:3rem;font-size:.95rem}
+.flow-banner .icon{font-size:1.5rem}
+.flow-banner strong{color:var(--orange)}
+.flow-steps{display:flex;align-items:flex-start;gap:0;margin-bottom:4rem;flex-wrap:wrap;justify-content:center}
+.flow-step{display:flex;flex-direction:column;align-items:center;text-align:center;width:180px}
+.flow-step-num{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.95rem;margin-bottom:.75rem}
+.flow-step:nth-child(1) .flow-step-num{background:var(--orange-glow);color:var(--orange);border:2px solid var(--orange)}
+.flow-step:nth-child(3) .flow-step-num{background:var(--accent-glow);color:var(--accent-light);border:2px solid var(--accent)}
+.flow-step:nth-child(5) .flow-step-num{background:var(--green-glow);color:var(--green);border:2px solid var(--green)}
+.flow-step:nth-child(7) .flow-step-num{background:var(--cyan-glow);color:var(--cyan);border:2px solid var(--cyan)}
+.flow-step h4{font-size:.85rem;margin-bottom:.25rem}
+.flow-step p{font-size:.75rem;color:var(--text-muted)}
+.flow-connector{display:flex;align-items:center;justify-content:center;padding-top:.5rem;color:var(--text-dim);font-size:1.2rem;width:40px}
+.endpoint-group{margin-bottom:2.5rem}
+.endpoint-group-title{font-size:1.1rem;font-weight:700;margin-bottom:1rem;padding-left:.25rem;display:flex;align-items:center;gap:.5rem}
+.endpoint-group-title .dot{width:8px;height:8px;border-radius:50%}
+.endpoint-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:.75rem;overflow:hidden;transition:border-color .2s}
+.endpoint-card:hover{border-color:var(--accent)}
+.endpoint-header{display:flex;align-items:center;gap:.75rem;padding:1rem 1.25rem;cursor:pointer;user-select:none}
+.method-badge{padding:.2rem .6rem;border-radius:6px;font-size:.75rem;font-weight:700;font-family:'Courier New',monospace;min-width:52px;text-align:center}
+.method-get{background:var(--green-glow);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.method-post{background:var(--accent-glow);color:var(--accent-light);border:1px solid rgba(99,102,241,.3)}
+.method-put{background:var(--orange-glow);color:var(--orange);border:1px solid rgba(245,158,11,.3)}
+.endpoint-path{font-family:'Courier New',monospace;font-size:.9rem;font-weight:500}
+.endpoint-desc{margin-left:auto;font-size:.8rem;color:var(--text-muted)}
+.endpoint-toggle{color:var(--text-dim);font-size:.85rem;transition:transform .2s}
+.endpoint-body{display:none;padding:0 1.25rem 1.25rem;border-top:1px solid var(--border)}
+.endpoint-body.open{display:block}
+.endpoint-body h5{font-size:.8rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.08em;margin-top:1rem;margin-bottom:.25rem}
+.endpoint-body h5:first-child{margin-top:.5rem}
+.try-it{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-top:1rem}
+.try-it-title{font-size:.85rem;font-weight:600;color:var(--accent-light);margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem}
+.try-it-title::before{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent-light)}
+.form-row{display:flex;gap:.75rem;margin-bottom:.6rem;flex-wrap:wrap;align-items:flex-end}
+.form-group{display:flex;flex-direction:column;gap:.25rem;flex:1;min-width:140px}
+.form-group label{font-size:.72rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em}
+.form-group input,.form-group select,.form-group textarea{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;color:var(--text);font-size:.82rem;font-family:'Inter',sans-serif;outline:none;transition:border-color .2s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--accent)}
+.form-group textarea{resize:vertical;min-height:80px;font-family:'Courier New',monospace;font-size:.78rem}
+.form-group select{cursor:pointer}
+.form-actions{display:flex;gap:.5rem;align-items:center;margin-top:.75rem}
+.response-box{margin-top:.75rem;border-radius:8px;overflow:hidden;display:none}
+.response-box.visible{display:block}
+.response-header{display:flex;align-items:center;gap:.75rem;padding:.6rem 1rem;font-size:.8rem;font-weight:600}
+.response-header.success{background:rgba(16,185,129,.1);color:var(--green)}
+.response-header.error{background:rgba(239,68,68,.1);color:var(--red)}
+.response-header.loading{background:rgba(99,102,241,.1);color:var(--accent-light)}
+.response-header .status-code{font-family:'Courier New',monospace}
+.response-header .response-time{margin-left:auto;font-weight:400;color:var(--text-dim)}
+.response-body-output{background:var(--surface2);padding:1rem;font-size:.78rem;font-family:'Courier New',monospace;color:var(--text-muted);line-height:1.5;overflow-x:auto;max-height:350px;overflow-y:auto;white-space:pre-wrap}
+.locked-overlay{position:relative}
+.locked-overlay .lock-msg{position:absolute;inset:0;background:rgba(10,10,15,.85);backdrop-filter:blur(4px);border-radius:10px;z-index:10;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;text-align:center;padding:1rem}
+.locked-overlay .lock-msg .lock-icon{font-size:1.5rem}
+.locked-overlay .lock-msg p{font-size:.82rem;color:var(--text-muted)}
+.locked-overlay .lock-msg strong{color:var(--orange)}
+.locked-overlay.unlocked .lock-msg{display:none}
+.param-table{width:100%;font-size:.8rem;border-collapse:collapse;margin-top:.5rem}
+.param-table th{text-align:left;color:var(--text-dim);font-weight:500;padding:.4rem .5rem;border-bottom:1px solid var(--border)}
+.param-table td{padding:.4rem .5rem;border-bottom:1px solid var(--border);color:var(--text-muted)}
+.param-table code{background:var(--surface2);padding:.1rem .4rem;border-radius:4px;font-size:.78rem}
+.required{color:var(--red);font-size:.7rem}
+.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem}
+.perf-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
+.perf-card .value{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--accent-light),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.perf-card .label{font-size:.85rem;color:var(--text-muted);margin-top:.25rem}
+.robot-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
+.robot-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;background:var(--surface2);border:1px solid var(--border);border-radius:100px;font-size:.78rem}
+.robot-chip .chip-id{color:var(--accent-light);font-weight:600;font-family:'Courier New',monospace}
+.robot-chip .chip-name{color:var(--text-muted)}
+footer{text-align:center;padding:3rem 2rem;border-top:1px solid var(--border);color:var(--text-dim);font-size:.85rem}
+footer a{color:var(--accent-light);text-decoration:none}
+footer a:hover{text-decoration:underline}
+@media(max-width:700px){.endpoint-desc{display:none}.arch-diagram{flex-direction:column}.arch-arrow{transform:rotate(90deg)}.flow-connector{transform:rotate(90deg);width:auto;padding:.5rem 0}.flow-steps{flex-direction:column;align-items:center}}
+</style>
+</head>
+<body>
+<section class="hero">
+  <div class="hero-badge"><span>&#9679;</span> High-Performance Sensor Data API</div>
+  <h1>RoboSense API</h1>
+  <p>물류 창고 자율주행 로봇을 위한 고성능 센서 데이터 처리 API.<br>실시간 수집 &#183; C++ 최적화 &#183; Redis 캐싱 &#183; 비동기 배치 처리</p>
+  <div class="server-status" id="serverStatus"><span class="status-dot checking" id="statusDot"></span><span id="statusText">서버 상태 확인 중...</span></div>
+  <div class="hero-actions">
+    <a href="#playground" class="btn btn-primary">API 테스트하기 &#8595;</a>
+    <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank" class="btn btn-outline">GitHub &#8599;</a>
+  </div>
+</section>
+<section class="section">
+  <div class="section-label">Architecture</div>
+  <div class="section-title">시스템 아키텍처</div>
+  <p class="section-desc">Nginx 리버스 프록시 뒤에 다중 FastAPI 인스턴스가 비동기로 동작하며, Redis 캐싱과 PostgreSQL을 통해 높은 처리량과 낮은 지연 시간을 달성합니다.</p>
+  <div class="arch-diagram">
+    <div class="arch-node node-robot">Robots<small>센서 데이터 전송</small></div><div class="arch-arrow">&#8594;</div>
+    <div class="arch-node node-nginx">Nginx<small>로드 밸런서</small></div><div class="arch-arrow">&#8594;</div>
+    <div class="arch-node node-api">FastAPI &#215;N<small>비동기 처리</small></div><div class="arch-arrow">&#8594;</div>
+    <div class="arch-node node-redis">Redis<small>캐시 / TTL</small></div><div class="arch-arrow">&#8594;</div>
+    <div class="arch-node node-pg">PostgreSQL<small>영구 저장</small></div>
+  </div>
+  <div style="margin-top:3rem;"><div class="section-label">Tech Stack</div><div class="section-title">기술 스택</div></div>
+  <div class="tech-grid">
+    <div class="tech-card"><h4>FastAPI + Uvicorn</h4><p>비동기 ASGI 서버, 타입 힌트 기반 자동 문서화</p></div>
+    <div class="tech-card"><h4>PostgreSQL 16</h4><p>asyncpg 드라이버, JSONB 센서 데이터, 복합 인덱스</p></div>
+    <div class="tech-card"><h4>Redis 7</h4><p>Cache-Aside 패턴, TTL 기반 자동 만료, 캐시 워밍</p></div>
+    <div class="tech-card"><h4>C++ 17 + pybind11</h4><p>센서 직렬화, 이동평균 필터링, null 비율 계산</p></div>
+    <div class="tech-card"><h4>Nginx</h4><p>리버스 프록시, 로드 밸런싱, GZip 압축</p></div>
+    <div class="tech-card"><h4>Docker Compose</h4><p>멀티 컨테이너 오케스트레이션, 환경 일관성</p></div>
+    <div class="tech-card"><h4>AWS EC2</h4><p>실제 배포 환경에서 TPS 부하 테스트</p></div>
+    <div class="tech-card"><h4>Locust</h4><p>점진적 부하 테스트 (100 &#8594; 5,000 동시 접속)</p></div>
+  </div>
+</section>
+<section class="section" id="playground">
+  <div class="section-label">Interactive Playground</div>
+  <div class="section-title">API 테스트</div>
+  <p class="section-desc">실제 서버에 요청을 보내고 응답을 확인하세요. 모든 기능은 로봇 등록 후 사용할 수 있습니다.</p>
+  <div class="flow-banner"><div class="icon">&#9888;</div><div><strong>Step 1 필수</strong> &#8212; 센서 데이터 수집, 필터링, 통계 등 모든 기능은 <strong>로봇 등록(POST /api/robots)</strong> 이후에만 사용할 수 있습니다.</div></div>
+  <div class="flow-steps">
+    <div class="flow-step"><div class="flow-step-num">1</div><h4>로봇 등록</h4><p>POST /api/robots</p></div><div class="flow-connector">&#8594;</div>
+    <div class="flow-step"><div class="flow-step-num">2</div><h4>센서 데이터 수집</h4><p>POST /api/sensors</p></div><div class="flow-connector">&#8594;</div>
+    <div class="flow-step"><div class="flow-step-num">3</div><h4>조회 &amp; 필터링</h4><p>GET /api/sensors/*</p></div><div class="flow-connector">&#8594;</div>
+    <div class="flow-step"><div class="flow-step-num">4</div><h4>통계 확인</h4><p>GET /api/stats</p></div>
+  </div>
+  <div class="endpoint-group">
+    <div class="endpoint-group-title"><span class="dot" style="background:var(--orange)"></span> Step 1. 로봇 관리</div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-post">POST</span><span class="endpoint-path">/api/robots</span><span class="endpoint-desc">로봇 등록 (최초 필수)</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body">
+        <h5>Parameters</h5>
+        <table class="param-table"><tr><th>Field</th><th>Type</th><th>Note</th></tr><tr><td><code>name</code> <span class="required">필수</span></td><td>string</td><td>로봇 이름 (중복 불가)</td></tr><tr><td><code>model</code></td><td>string</td><td>로봇 모델명</td></tr><tr><td><code>status</code></td><td>enum</td><td>active / inactive / maintenance</td></tr><tr><td><code>battery_level</code></td><td>int</td><td>0 ~ 100</td></tr></table>
+        <div class="try-it"><div class="try-it-title">Try it</div>
+          <div class="form-row"><div class="form-group"><label>Name</label><input type="text" id="robot-name" value="TestBot-1"></div><div class="form-group"><label>Model</label><input type="text" id="robot-model" value="Warehouse-Bot-v2"></div></div>
+          <div class="form-row"><div class="form-group"><label>Status</label><select id="robot-status"><option value="active">active</option><option value="inactive">inactive</option><option value="maintenance">maintenance</option></select></div><div class="form-group"><label>Battery</label><input type="number" id="robot-battery" min="0" max="100" value="100"></div></div>
+          <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postRobot()">Send Request</button></div>
+          <div class="response-box" id="resp-post-robot"></div>
+        </div>
+        <h5 style="margin-top:1.25rem;">Registered Robots</h5>
+        <div id="registeredRobots" class="robot-list"><span style="font-size:.8rem;color:var(--text-dim);">아직 등록된 로봇이 없습니다.</span></div>
+      </div>
+    </div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/robots</span><span class="endpoint-desc">전체 로봇 목록</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it"><div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Status (optional)</label><select id="robots-list-status"><option value="">전체</option><option value="active">active</option><option value="inactive">inactive</option><option value="maintenance">maintenance</option></select></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getRobots()">Send Request</button></div>
+        <div class="response-box" id="resp-get-robots"></div>
+      </div></div>
+    </div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/robots/{id}</span><span class="endpoint-desc">특정 로봇 + 최근 센서</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it"><div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="robot-detail-id" value="1"></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getRobotDetail()">Send Request</button></div>
+        <div class="response-box" id="resp-get-robot-detail"></div>
+      </div></div>
+    </div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-put">PUT</span><span class="endpoint-path">/api/robots/{id}</span><span class="endpoint-desc">로봇 상태 업데이트</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it"><div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="robot-update-id" value="1"></div><div class="form-group"><label>Status</label><select id="robot-update-status"><option value="active">active</option><option value="inactive">inactive</option><option value="maintenance">maintenance</option></select></div><div class="form-group"><label>Battery</label><input type="number" id="robot-update-battery" min="0" max="100" value="85"></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-orange" onclick="putRobot()">Send Request</button></div>
+        <div class="response-box" id="resp-put-robot"></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="endpoint-group">
+    <div class="endpoint-group-title"><span class="dot" style="background:var(--accent)"></span> Step 2. 센서 데이터</div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-post">POST</span><span class="endpoint-path">/api/sensors</span><span class="endpoint-desc">센서 데이터 수집</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-post-sensor"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
+        <div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group" style="flex:3;"><label>Request Body (JSON)</label><textarea id="sensor-body" rows="8">{
+  "robot_id": 1,
+  "timestamp": "2026-03-21T10:30:00",
+  "sensors": [
+    {"sensor_type": "IMU", "data": {"acceleration": {"x": 1.2, "y": -0.5, "z": 9.8}}},
+    {"sensor_type": "GPS", "data": null},
+    {"sensor_type": "LiDAR", "data": {"distance": 3.5, "angle": 45}}
+  ]
+}</textarea></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button></div>
+        <div class="response-box" id="resp-post-sensor"></div>
+      </div></div>
+    </div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/sensors</span><span class="endpoint-desc">센서 데이터 목록</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-get-sensor"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
+        <div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="sensor-list-robot-id"></div><div class="form-group"><label>Type</label><select id="sensor-list-type"><option value="">전체</option><option value="IMU">IMU</option><option value="GPS">GPS</option><option value="LiDAR">LiDAR</option></select></div><div class="form-group"><label>Limit</label><input type="number" id="sensor-list-limit" value="10"></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getSensors()">Send Request</button></div>
+        <div class="response-box" id="resp-get-sensors"></div>
+      </div></div>
+    </div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/sensors/filtered</span><span class="endpoint-desc">이동평균 필터링 (C++)</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-filter-sensor"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
+        <div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Robot ID</label><input type="number" id="filter-robot-id" value="1"></div><div class="form-group"><label>Type</label><select id="filter-sensor-type"><option value="IMU">IMU</option><option value="GPS">GPS</option><option value="LiDAR">LiDAR</option></select></div><div class="form-group"><label>Field</label><input type="text" id="filter-field" value="acceleration.x"></div><div class="form-group"><label>Window</label><input type="number" id="filter-window" value="3"></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getFiltered()">Send Request</button></div>
+        <div class="response-box" id="resp-get-filtered"></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="endpoint-group">
+    <div class="endpoint-group-title"><span class="dot" style="background:var(--green)"></span> Step 3. 통계</div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/api/stats</span><span class="endpoint-desc">종합 통계</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it locked-overlay" id="lock-stats"><div class="lock-msg"><div class="lock-icon">&#128274;</div><p><strong>로봇을 먼저 등록하세요</strong></p></div>
+        <div class="try-it-title">Try it</div>
+        <div class="form-row"><div class="form-group"><label>Start Time</label><input type="datetime-local" id="stats-start"></div><div class="form-group"><label>End Time</label><input type="datetime-local" id="stats-end"></div></div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="getStats()">Send Request</button></div>
+        <div class="response-box" id="resp-get-stats"></div>
+      </div></div>
+    </div>
+  </div>
+  <div class="endpoint-group">
+    <div class="endpoint-group-title"><span class="dot" style="background:var(--text-dim)"></span> 시스템</div>
+    <div class="endpoint-card"><div class="endpoint-header" onclick="toggle(this)"><span class="method-badge method-get">GET</span><span class="endpoint-path">/health_check</span><span class="endpoint-desc">DB + Redis 상태</span><span class="endpoint-toggle">&#9660;</span></div>
+      <div class="endpoint-body"><div class="try-it"><div class="try-it-title">Try it</div>
+        <div class="form-actions"><button class="btn btn-sm btn-green" onclick="healthCheck()">Send Request</button></div>
+        <div class="response-box" id="resp-health"></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+<section class="section">
+  <div class="section-label">Performance</div>
+  <div class="section-title">성능 최적화 포인트</div>
+  <p class="section-desc" style="margin-bottom:2rem;">극한 조건에서의 성능 최적화를 목표로 설계되었습니다.</p>
+  <div class="perf-grid">
+    <div class="perf-card"><div class="value">Batch</div><div class="label">asyncio Queue + COPY<br>비동기 배치 커밋</div></div>
+    <div class="perf-card"><div class="value">C++</div><div class="label">pybind11 연동<br>센서 직렬화 &amp; 필터링</div></div>
+    <div class="perf-card"><div class="value">Cache</div><div class="label">Redis Cache-Aside<br>TTL 10s~60s 자동 갱신</div></div>
+    <div class="perf-card"><div class="value">GZip</div><div class="label">응답 압축 미들웨어<br>1KB 이상 자동 압축</div></div>
+  </div>
+</section>
+<footer><p>Built by <strong>JeongGihun</strong> &#183; <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank">GitHub</a></p></footer>
+<script>
+var B=location.origin,R=[];
+function checkServer(){var d=document.getElementById('statusDot'),t=document.getElementById('statusText');fetch(B+'/health_check').then(function(r){if(r.ok){d.className='status-dot online';t.textContent='Server Online';}else{d.className='status-dot offline';t.textContent='Unhealthy';}}).catch(function(){d.className='status-dot offline';t.textContent='Server Offline';});}
+checkServer();
+function toggle(h){var b=h.nextElementSibling,t=h.querySelector('.endpoint-toggle');b.classList.toggle('open');t.style.transform=b.classList.contains('open')?'rotate(180deg)':'';}
+function showResp(id,s,d,m){var b=document.getElementById(id),ok=s>=200&&s<300;b.className='response-box visible';b.innerHTML='<div class="response-header '+(ok?'success':'error')+'"><span class="status-code">'+s+'</span><span>'+(ok?'Success':'Error')+'</span><span class="response-time">'+m+'ms</span></div><div class="response-body-output">'+(typeof d==='string'?d:JSON.stringify(d,null,2))+'</div>';}
+function showLoad(id){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header loading"><span>Sending...</span></div>';}
+function showErr(id,m){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header error"><span>Error</span></div><div class="response-body-output">'+m+'</div>';}
+function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
+function unlock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.add('unlocked');});}
+function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML=R.map(function(r){return'<div class="robot-chip"><span class="chip-id">#'+r.id+'</span><span class="chip-name">'+r.name+'</span></div>';}).join('');}
+function postRobot(){showLoad('resp-post-robot');api('POST','/api/robots',{name:document.getElementById('robot-name').value,model:document.getElementById('robot-model').value,status:document.getElementById('robot-status').value,battery_level:parseInt(document.getElementById('robot-battery').value)}).then(function(r){showResp('resp-post-robot',r.status,r.data,r.ms);if(r.status===201){R.push({id:r.data.id,name:r.data.name});updateRL();unlock();}}).catch(function(e){showErr('resp-post-robot',e.message);});}
+function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/api/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}
+function getRobotDetail(){showLoad('resp-get-robot-detail');api('GET','/api/robots/'+document.getElementById('robot-detail-id').value).then(function(r){showResp('resp-get-robot-detail',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-robot-detail',e.message);});}
+function putRobot(){showLoad('resp-put-robot');var id=document.getElementById('robot-update-id').value;api('PUT','/api/robots/'+id,{status:document.getElementById('robot-update-status').value,battery_level:parseInt(document.getElementById('robot-update-battery').value)}).then(function(r){showResp('resp-put-robot',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-put-robot',e.message);});}
+function postSensor(){showLoad('resp-post-sensor');try{api('POST','/api/sensors',JSON.parse(document.getElementById('sensor-body').value)).then(function(r){showResp('resp-post-sensor',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-post-sensor',e.message);});}catch(e){showErr('resp-post-sensor','Invalid JSON');}}
+function fillSample(){var now=new Date().toISOString().slice(0,19);document.getElementById('sensor-body').value=JSON.stringify({robot_id:1,timestamp:now,sensors:[{sensor_type:"IMU",data:{acceleration:{x:+(Math.random()*2).toFixed(2),y:+(Math.random()*-1).toFixed(2),z:9.8}}},{sensor_type:"GPS",data:null},{sensor_type:"LiDAR",data:{distance:+(Math.random()*10).toFixed(1),angle:Math.floor(Math.random()*360)}}]},null,2);}
+function getSensors(){showLoad('resp-get-sensors');var p=[],rid=document.getElementById('sensor-list-robot-id').value,st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid)p.push('robot_id='+rid);if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/api/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
+function getFiltered(){showLoad('resp-get-filtered');api('GET','/api/sensors/filtered?robot_id='+document.getElementById('filter-robot-id').value+'&sensor_type='+document.getElementById('filter-sensor-type').value+'&field='+document.getElementById('filter-field').value+'&window_size='+document.getElementById('filter-window').value).then(function(r){showResp('resp-get-filtered',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-filtered',e.message);});}
+function getStats(){showLoad('resp-get-stats');var p=[],s=document.getElementById('stats-start').value,e=document.getElementById('stats-end').value;if(s)p.push('start_time='+new Date(s).toISOString());if(e)p.push('end_time='+new Date(e).toISOString());api('GET','/api/stats'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-stats',r.status,r.data,r.ms);}).catch(function(e2){showErr('resp-get-stats',e2.message);});}
+function healthCheck(){showLoad('resp-health');api('GET','/health_check').then(function(r){showResp('resp-health',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-health',e.message);});}
+fetch(B+'/api/robots').then(function(r){return r.json();}).then(function(d){if(Array.isArray(d)&&d.length){R=d.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(){});
+</script>
+</body>
+</html>
