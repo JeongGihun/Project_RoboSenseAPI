@@ -3,7 +3,7 @@ from app.models.robot import RobotCreate, RobotResponse, SensorInRobot, RobotDet
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import Robot, SensorData
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, text
 from typing import List, Optional
 from app.redis_client import get_redis
 from datetime import datetime, timezone
@@ -166,6 +166,9 @@ async def reset_all_data(db : AsyncSession = Depends(get_db)) :
         await db.execute(delete(SensorData))
         # 로봇 데이터 삭제
         await db.execute(delete(Robot))
+        # ID 시퀀스 1부터 재시작
+        await db.execute(text("ALTER SEQUENCE robots_id_seq RESTART WITH 1"))
+        await db.execute(text("ALTER SEQUENCE sensor_data_id_seq RESTART WITH 1"))
         await db.commit()
 
         # Redis 캐시 전체 초기화
