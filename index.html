@@ -26,6 +26,8 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .btn-green:hover{background:#0ea572}
 .btn-orange{background:var(--orange);color:#000}
 .btn-orange:hover{background:#d97706}
+.btn-red{background:#ef4444;color:#fff}
+.btn-red:hover{background:#dc2626}
 .section{padding:5rem 2rem;max-width:1100px;margin:0 auto}
 .section-label{font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--accent-light);margin-bottom:.5rem}
 .section-title{font-size:2rem;font-weight:700;margin-bottom:.75rem}
@@ -179,7 +181,7 @@ footer a:hover{text-decoration:underline}
         <div class="try-it"><div class="try-it-title">Try it</div>
           <div class="form-row"><div class="form-group"><label>Name</label><input type="text" id="robot-name" value="TestBot-1"></div><div class="form-group"><label>Model</label><input type="text" id="robot-model" value="Warehouse-Bot-v2"></div></div>
           <div class="form-row"><div class="form-group"><label>Status</label><select id="robot-status"><option value="active">active</option><option value="inactive">inactive</option><option value="maintenance">maintenance</option></select></div><div class="form-group"><label>Battery</label><input type="number" id="robot-battery" min="0" max="100" value="100"></div></div>
-          <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postRobot()">Send Request</button><button class="btn btn-sm btn-orange" onclick="autoGenRobots()">&#9889; 로봇 10개 자동 생성</button></div>
+          <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postRobot()">Send Request</button><button class="btn btn-sm btn-orange" onclick="autoGenRobots()">&#9889; 로봇 10개 자동 생성</button><button class="btn btn-sm btn-red" onclick="resetAllData()">&#128465; 데이터 초기화</button></div>
           <div class="response-box" id="resp-post-robot"></div>
         </div>
         <h5 style="margin-top:1.25rem;">Registered Robots</h5>
@@ -294,6 +296,7 @@ function showLoad(id){var b=document.getElementById(id);b.className='response-bo
 function showErr(id,m){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header error"><span>Error</span></div><div class="response-body-output">'+m+'</div>';}
 function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
 function unlock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.add('unlocked');});}
+function lock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.remove('unlocked');});}
 function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML=R.map(function(r){return'<div class="robot-chip"><span class="chip-id">#'+r.id+'</span><span class="chip-name">'+r.name+'</span></div>';}).join('');}
 var MODELS=['Warehouse-Bot-v2','Patrol-Bot-X1','Cargo-Mover-3K','Scout-Mini','HeavyLift-900','SpeedRunner-S','Inspector-Pro','CleanBot-Z','Picker-Alpha','Navigator-V5'];
 var autoTimer=null,autoSentN=0,autoErrN=0,autoTotalMs=0;
@@ -318,6 +321,15 @@ function autoGenRobots(){
     }).catch(function(){err++;next();});
   }
   next();
+}
+
+function resetAllData(){
+  if(!confirm('정말로 모든 로봇과 센서 데이터를 삭제하시겠습니까?'))return;
+  showLoad('resp-post-robot');
+  api('DELETE','/api/reset').then(function(r){
+    showResp('resp-post-robot',r.status,r.data,r.ms);
+    if(r.status===200){R=[];updateRL();lock();}
+  }).catch(function(e){showErr('resp-post-robot',e.message);});
 }
 
 function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/api/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}

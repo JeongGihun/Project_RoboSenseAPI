@@ -3,7 +3,7 @@ from app.models.robot import RobotCreate, RobotResponse, SensorInRobot, RobotDet
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import Robot, SensorData
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from typing import List, Optional
 from app.redis_client import get_redis
 from datetime import datetime, timezone
@@ -154,3 +154,25 @@ async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)
     await redis.setex(cache_key,5, json.dumps(response_data, default = str))
 
     return response_data
+
+
+@router.delete('/api/reset', status_code = status.HTTP_200_OK)
+async def reset_all_data(db : AsyncSession = Depends(get_db)) :
+    """모든 센서 데이터와 로봇 데이터를 초기화합니다."""
+    try :
+        redis = get_redis()
+
+        # 센서 데이터 먼저 삭제 (FK 제약조건)
+        await db.execute(delete(SensorData))
+        # 로봇 데이터 삭제
+        await db.execute(delete(Robot))
+        await db.commit()
+
+        # Redis 캐시 전체 초기화
+        await redis.flushdb()
+
+        return {"message" : "모든 데이터가 초기화되었습니다.", "status" : "success"}
+
+    except Exception as e :
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"데이터 초기화 실패 : {str(e)}")
