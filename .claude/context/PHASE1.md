@@ -54,10 +54,10 @@ RoboSenseAPI/
 4. **구현** (TDD GREEN)
 5. **리팩토링** (TDD REFACTOR)
 6. **QA** (pytest 전체 실행)
-7. **커밋** (feature 브랜치)
-8. **로컬 검증** (Docker 재빌드 + /health)
-9. **integration 머지** (feat/* → integration PR & 머지, CI 통과 확인)
-10. **학습 기록** (`lessons.md` 갱신)
+7. **학습 기록** (`lessons.md` 갱신)
+8. **커밋** (feature 브랜치)
+9. **로컬 검증** (Docker 재빌드 + /health)
+10. **integration 머지** (feat/* → integration PR & 머지, CI 통과 확인)
 
 배포: integration → main 머지 시 deploy.yml 자동 트리거. 세부는 `CLAUDE.md` 2번 섹션 참조.
 

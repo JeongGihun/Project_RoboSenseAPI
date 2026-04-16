@@ -27,10 +27,10 @@
 | 4 | **구현** (TDD GREEN: 테스트 통과하는 최소 코드) | 동작 코드 |
 | 5 | **리팩토링** (TDD REFACTOR: 구조 개선) | 정리된 코드 |
 | 6 | **QA** (pytest 전체 실행, 기존 테스트 안 깨짐 확인) | 전체 통과 |
-| 7 | **커밋** (feature 브랜치에 커밋) | 커밋 |
-| 8 | **로컬 검증** (Docker 재빌드 + /health 스모크 테스트) | 동작 확인 |
-| 9 | **integration 머지** (feat/* → integration PR & 머지, CI 통과 확인) | CI green |
-| 10 | **학습 기록** (lessons.md 갱신, 있으면) | lesson 추가 |
+| 7 | **학습 기록** (lessons.md 갱신, 있으면) | lesson 추가 |
+| 8 | **커밋** (feature 브랜치에 커밋) | 커밋 |
+| 9 | **로컬 검증** (Docker 재빌드 + /health 스모크 테스트) | 동작 확인 |
+| 10 | **integration 머지** (feat/* → integration PR & 머지, CI 통과 확인) | CI green |
 
 **배포 흐름**: 매일 feat/* → integration 머지 시 CI(pytest + ruff)로 검증. integration → main 머지 시 deploy.yml이 자동으로 EC2 배포 트리거. 각 일자 작업 중 main 직접 머지 금지.
 
@@ -123,7 +123,7 @@ feat/w1-openapi   ← D6 OpenAPI 작업
 - 시크릿 하드코딩 (환경변수 사용)
 - 테스트 없이 구현만 추가 (TDD 예외 영역 제외)
 - Prometheus 등 범위 외 인프라 추가
-- MCP 서버, 외부 스킬 설치 (사용자 명시 허가 없이 금지)
+- MCP 서버, 외부 스킬 설치/변경 (꼭 추가해야 하는 것만 사용자 명시 허가 후 허용)
 - **W1 중 main 브랜치 직접 머지**
 
 ---

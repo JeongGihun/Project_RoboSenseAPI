@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import sensor_routes, robot_routes, stats_routes
+from app.routes import sensor_routes, robot_routes, stats_routes, admin_routes
 from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool, get_asyncpg_pool
 from app.middleware import RequestIDMiddleware
 from app.logging_config import RequestIDFilter
@@ -9,7 +9,10 @@ from contextlib import asynccontextmanager
 from app.redis_client import connect_redis, close_redis, get_redis
 import asyncio, logging, os
 from app.context import request_id
+from app.metrics import get_metrics
+from app.exceptions import BaseAPIException
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.exceptions import RequestValidationError
 from app.utils.retry import retry_connect
 
 handler = logging.StreamHandler()
@@ -62,6 +65,7 @@ app.add_middleware(
 app.include_router(sensor_routes.router)
 app.include_router(robot_routes.router)
 app.include_router(stats_routes.router)
+app.include_router(admin_routes.router)
 
 @app.get("/", response_class=HTMLResponse)
 def root() :
@@ -72,6 +76,7 @@ def root() :
     except FileNotFoundError :
         return HTMLResponse(content="<h1>RoboSense API</h1><p>Landing page not found.</p>")
 
+@app.get("/health")
 @app.get("/health_check")
 async def health() :
     db_ok = False
@@ -98,8 +103,49 @@ async def health() :
             content={"status": "unhealthy", "db": db_ok, "redis": redis_ok}
         )
 
+@app.get("/metrics")
+async def metrics():
+    return get_metrics()
+
+
+@app.exception_handler(BaseAPIException)
+async def api_exception_handler(request, exc: BaseAPIException):
+    logger.warning(f"request_id: {request_id.get()} | {exc.error_code}: {exc.message}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error_code": exc.error_code,
+            "message": exc.message,
+            "detail": exc.detail,
+            "timestamp": exc.timestamp,
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    from datetime import datetime, timezone
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error_code": "VALIDATION_ERROR",
+            "message": "요청 데이터 검증 실패",
+            "detail": exc.errors(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )
+
+
 @app.exception_handler(Exception)
-async def exception_handler(request, exc) :
+async def exception_handler(request, exc):
     logger.error(f"request_id: {request_id.get()} | {request.method} {request.url} | {type(exc).__name__}: {exc}")
-    info = {"status": "error", "message": "Internal server error"}
-    return JSONResponse(status_code=500, content=info)
+    from datetime import datetime, timezone
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error_code": "INTERNAL_ERROR",
+            "message": "서버 내부 오류",
+            "detail": {},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        },
+    )

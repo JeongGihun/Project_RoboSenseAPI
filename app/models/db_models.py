@@ -4,6 +4,17 @@ from datetime import datetime, timezone
 from app.models.enum import Status, SensorName
 from sqlalchemy.orm import relationship
 
+
+class ApiKey(Base):
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key_hash = Column(String, nullable=False)
+    salt = Column(String, nullable=False)
+    robot_id = Column(Integer, ForeignKey("robots.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    revoked = Column(Integer, default=0)
+
 class Robot(Base) :
     __tablename__ = "robots"
 
