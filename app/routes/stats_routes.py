@@ -8,7 +8,9 @@ from datetime import datetime, timezone, timedelta
 from app.models.enum import SensorName
 from app.redis_client import get_redis
 from app.auth import verify_api_key
-import json, asyncio, logging
+import json
+import asyncio
+import logging
 import sensor_cpp
 
 logger = logging.getLogger(__name__)
@@ -21,7 +23,7 @@ async def calculate_stats(
         end_time : datetime
 ) -> dict :
     sensor_query = select(SensorData.sensor_type, func.count().label('total'), func.sum(
-        case((SensorData.raw_data == None, 1), else_ = 0)).label('null_count')).where(
+        case((SensorData.raw_data.is_(None), 1), else_ = 0)).label('null_count')).where(
         SensorData.created_at > start_time, SensorData.created_at <= end_time
     ).group_by(SensorData.sensor_type)
 

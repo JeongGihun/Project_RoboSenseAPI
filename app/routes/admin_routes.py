@@ -28,7 +28,7 @@ async def issue_api_key(
         "id": api_key.id,
         "api_key": plain_key,
         "robot_id": api_key.robot_id,
-        "message": "이 키는 다시 확인할 수 없습니다. 안전하게 보관하세요.",
+        "message": "키 발급 완료",
     }
 
 

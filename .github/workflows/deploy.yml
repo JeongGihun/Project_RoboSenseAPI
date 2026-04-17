@@ -32,7 +32,7 @@ jobs:
             docker compose pull
             docker compose up -d
             sleep 10
-            curl -f http://localhost/health || (echo "Health check failed" && exit 1)
+            curl -f http://localhost/health || (echo "Health check failed, rolling back" && docker compose down && docker compose up -d --force-recreate && exit 1)
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1

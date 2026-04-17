@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from app.models.robot import RobotCreate, RobotResponse, SensorInRobot, RobotDetailResponse, RobotStatusUpdate
+from app.models.robot import RobotCreate, RobotResponse, RobotDetailResponse, RobotStatusUpdate
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import Robot, SensorData

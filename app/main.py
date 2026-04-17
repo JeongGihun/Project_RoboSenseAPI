@@ -7,7 +7,10 @@ from app.middleware import RequestIDMiddleware
 from app.logging_config import RequestIDFilter
 from contextlib import asynccontextmanager
 from app.redis_client import connect_redis, close_redis, get_redis
-import asyncio, logging, os
+import asyncio
+import logging
+import os
+from datetime import datetime, timezone
 from app.context import request_id
 from app.metrics import get_metrics
 from app.exceptions import BaseAPIException
@@ -86,13 +89,13 @@ async def health() :
         async with get_asyncpg_pool().acquire() as conn :
             await conn.fetchval("SELECT 1")
         db_ok = True
-    except :
+    except Exception:
         pass
 
     try :
         await get_redis().ping()
         redis_ok = True
-    except :
+    except Exception:
         pass
 
     if db_ok and redis_ok:
@@ -124,7 +127,6 @@ async def api_exception_handler(request, exc: BaseAPIException):
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc: RequestValidationError):
-    from datetime import datetime, timezone
     return JSONResponse(
         status_code=422,
         content={
@@ -139,7 +141,6 @@ async def validation_exception_handler(request, exc: RequestValidationError):
 @app.exception_handler(Exception)
 async def exception_handler(request, exc):
     logger.error(f"request_id: {request_id.get()} | {request.method} {request.url} | {type(exc).__name__}: {exc}")
-    from datetime import datetime, timezone
     return JSONResponse(
         status_code=500,
         content={

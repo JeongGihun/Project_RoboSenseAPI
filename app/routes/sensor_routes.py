@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Query
+from fastapi import APIRouter, Depends, status, HTTPException
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
 from app.database import get_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +8,11 @@ from typing import Optional
 from app.redis_client import get_redis
 from app.auth import verify_api_key
 from app.exceptions import SensorNotFoundError
-import logging, time, asyncio, json, math
+import logging
+import time
+import asyncio
+import json
+import math
 from datetime import datetime, timezone
 import sensor_cpp
 

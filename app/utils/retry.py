@@ -1,4 +1,5 @@
-import asyncio, logging
+import asyncio
+import logging
 
 async def retry_connect(connect_func, name) :
     for time in range(5) :
@@ -6,7 +7,7 @@ async def retry_connect(connect_func, name) :
             await connect_func()
             logging.info(f"{name} 연결 : 성공")
             break
-        except :
+        except Exception:
             await asyncio.sleep(pow(2, time))
             logging.info(f"{name} 연결 : 실패, {time+1}번째 시도")
     else :
