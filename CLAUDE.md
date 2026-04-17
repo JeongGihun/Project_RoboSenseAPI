@@ -125,6 +125,8 @@ feat/w1-openapi   ← D6 OpenAPI 작업
 - Prometheus 등 범위 외 인프라 추가
 - MCP 서버, 외부 스킬 설치/변경 (꼭 추가해야 하는 것만 사용자 명시 허가 후 허용)
 - **W1 중 main 브랜치 직접 머지**
+- 이 레포 외부 파일 수정 금지
+- masterplan 참조 필요 시 `.claude/context/` 내 복사본만 사용
 
 ---
 
