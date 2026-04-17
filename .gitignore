@@ -37,3 +37,8 @@ Thumbs.db
 # Claude Code (전체 제외)
 CLAUDE.md
 .claude/
+
+# Test artifacts
+.coverage
+.pytest_cache/
+htmlcov/
