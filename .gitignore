@@ -34,6 +34,6 @@ Thumbs.db
 # log
 *.logd
 
-# Claude Code (개인 설정 제외, commands/context/tasks는 커밋)
-.claude/settings.local.json
-.claude/plans/
+# Claude Code (전체 제외)
+CLAUDE.md
+.claude/
