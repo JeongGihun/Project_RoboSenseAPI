@@ -1,7 +1,9 @@
 """통계 API 테스트 (D2)"""
+import asyncio
 from datetime import datetime, timezone
 
 from app.models.db_models import Robot, SensorData
+from app.redis_client import get_redis
 
 
 async def test_get_stats_default(client, db_session):
@@ -43,3 +45,26 @@ async def test_get_stats_with_data(client, db_session):
     assert response.status_code == 200
     data = response.json()
     assert "null_rates" in data
+
+
+async def test_stats_warming_lock_prevents_duplicate(client, monkeypatch):
+    """TTL<10 상태에서 동시 요청 다발 → regenerate는 leader 1개만 실행"""
+    from app.routes import stats_routes
+
+    redis = get_redis()
+    await redis.setex("stats:recent", 5, '{"cached": true}')
+
+    call_count = 0
+
+    async def spy_regenerate(db):
+        nonlocal call_count
+        call_count += 1
+
+    monkeypatch.setattr(stats_routes, "regenerate_stats_cache", spy_regenerate)
+
+    responses = await asyncio.gather(*[client.get("/api/stats") for _ in range(5)])
+    await asyncio.sleep(0.05)
+
+    for r in responses:
+        assert r.status_code == 200
+    assert call_count == 1

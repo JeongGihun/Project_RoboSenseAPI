@@ -48,8 +48,15 @@ class FakeRedis:
         self._data[key] = value
         self._ttls[key] = time.time() + ttl
 
-    async def set(self, key, value):
+    async def set(self, key, value, nx=False, ex=None):
+        if nx:
+            self._check_expired(key)
+            if key in self._data:
+                return None
         self._data[key] = value
+        if ex is not None:
+            self._ttls[key] = time.time() + ex
+        return True
 
     async def delete(self, *keys):
         for key in keys:
