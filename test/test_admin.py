@@ -116,6 +116,21 @@ async def test_revoke_nonexistent_key(client):
     assert response.status_code == 200
 
 
+async def test_reset_denies_regular_api_key(client):
+    """일반 API Key로 /api/reset 호출 → 401 (관리자 키 요구)"""
+    response = await client.delete("/api/reset")
+    assert response.status_code == 401
+
+
+async def test_reset_accepts_admin_key(client):
+    """관리자 키로 /api/reset 호출 → auth 통과 (401 아님)"""
+    response = await client.delete(
+        "/api/reset",
+        headers={"X-Admin-Key": ADMIN_KEY},
+    )
+    assert response.status_code != 401
+
+
 async def test_issue_key_with_robot_id(client, db_session):
     """robot_id 지정하여 키 발급"""
     from app.models.db_models import Robot
