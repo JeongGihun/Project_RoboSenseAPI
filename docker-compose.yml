@@ -52,6 +52,7 @@ services :
       POSTGRES_DB : ${POSTGRES_DB}
       REDIS_HOST : ${REDIS_HOST}
       REDIS_PORT : ${REDIS_PORT}
+      ALLOWED_ORIGINS : ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
       ENABLE_PROFILING : "false"  # cProfile 미사용 / 사용
     volumes :
       - ./profiles:/app/profiles
@@ -76,6 +77,7 @@ services :
       POSTGRES_DB: ${POSTGRES_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,6 +99,7 @@ services :
       POSTGRES_DB: ${POSTGRES_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,6 +121,7 @@ services :
       POSTGRES_DB: ${POSTGRES_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
@@ -139,6 +143,7 @@ services :
       POSTGRES_DB: ${POSTGRES_DB}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8000}
     depends_on:
       postgres:
         condition: service_healthy
