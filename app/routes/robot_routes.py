@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from app.models.robot import RobotCreate, RobotResponse, SensorInRobot, RobotDetailResponse, RobotStatusUpdate
+from app.models.robot import RobotCreate, RobotResponse, RobotDetailResponse, RobotStatusUpdate
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import Robot, SensorData
 from sqlalchemy import select, delete, text
 from typing import List, Optional
 from app.redis_client import get_redis
+from app.auth import verify_api_key
+from app.exceptions import RobotNotFoundError
 from datetime import datetime, timezone
 import json
 
@@ -16,7 +18,7 @@ router = APIRouter()
 # GET /api/robots/{id} (특정 로봇)
 
 @router.post('/api/robots', response_model = RobotResponse, status_code = status.HTTP_201_CREATED)
-async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depends(get_db)) :
+async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
     try :
         # redis 가져오기
         redis = get_redis()
@@ -40,7 +42,7 @@ async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depend
         raise HTTPException(status_code=500, detail=f"로봇 등록 실패 : {str(e)}")
 
 @router.put('/api/robots/{robot_id}', response_model=RobotResponse, status_code = status.HTTP_200_OK)
-async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, db : AsyncSession = Depends(get_db)) :
+async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
     try :
         redis = get_redis()
 
@@ -49,7 +51,7 @@ async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, d
         robot = result.scalar_one_or_none()
 
         if robot is None :
-            raise HTTPException(status_code=404, detail= "로봇을 찾을 수 없습니다.")
+            raise RobotNotFoundError({"robot_id": robot_id})
 
         old_status = robot.status
         robot.status = update_data.status
@@ -65,7 +67,7 @@ async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, d
 
         return robot
 
-    except HTTPException :
+    except (HTTPException, RobotNotFoundError) :
         raise
     except Exception as e :
         await db.rollback()
@@ -75,7 +77,8 @@ async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, d
 @router.get('/api/robots', response_model = List[RobotResponse], status_code = status.HTTP_200_OK)
 async def robot_data_list(
         status : Optional[str] = Query(None, description = "Filter by robot status"),
-        db : AsyncSession = Depends(get_db)) :
+        db : AsyncSession = Depends(get_db),
+        _key=Depends(verify_api_key)) :
     # redis 가져오기
     redis = get_redis()
     if status :
@@ -112,7 +115,7 @@ async def robot_data_list(
     return robots_data
 
 @router.get('/api/robots/{id}', response_model = RobotDetailResponse, status_code = status.HTTP_200_OK)
-async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)) :
+async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
     # redis 가져오기
     redis = get_redis()
     cache_key = f"robot:{id}:detail"
@@ -127,7 +130,7 @@ async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)
     robot = result.scalar_one_or_none()
 
     if robot is None :
-        raise HTTPException(status_code=404, detail="해당 로봇이 존재 하지 않음")
+        raise RobotNotFoundError({"robot_id": id})
 
     sensor_query = (select(SensorData).where(SensorData.robot_id == id).order_by(SensorData.timestamp.desc()).limit(10))
     sensor_result = await db.execute(sensor_query)
@@ -157,7 +160,7 @@ async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)
 
 
 @router.delete('/api/reset', status_code = status.HTTP_200_OK)
-async def reset_all_data(db : AsyncSession = Depends(get_db)) :
+async def reset_all_data(db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
     """모든 센서 데이터와 로봇 데이터를 초기화합니다."""
     try :
         redis = get_redis()

@@ -7,8 +7,13 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 from app.models.enum import SensorName
 from app.redis_client import get_redis
-import json, asyncio
+from app.auth import verify_api_key
+import json
+import asyncio
+import logging
 import sensor_cpp
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["통계"])
 
@@ -18,7 +23,7 @@ async def calculate_stats(
         end_time : datetime
 ) -> dict :
     sensor_query = select(SensorData.sensor_type, func.count().label('total'), func.sum(
-        case((SensorData.raw_data == None, 1), else_ = 0)).label('null_count')).where(
+        case((SensorData.raw_data.is_(None), 1), else_ = 0)).label('null_count')).where(
         SensorData.created_at > start_time, SensorData.created_at <= end_time
     ).group_by(SensorData.sensor_type)
 
@@ -73,7 +78,8 @@ async def calculate_stats(
 async def get_stats(
         start_time : Optional[datetime] = None,
         end_time : Optional[datetime] = None,
-        db : AsyncSession = Depends(get_db)) :
+        db : AsyncSession = Depends(get_db),
+        _key=Depends(verify_api_key)) :
 
     # redis 가져오기
     redis = get_redis()
@@ -112,5 +118,5 @@ async def regenerate_stats_cache(db: AsyncSession) :
         await redis.setex("stats:recent", 60, json.dumps(response_data, default=str))
 
     except Exception as e :
-        print(f"백그라운드 캐시 갱신 실패: {e}")
+        logger.error(f"백그라운드 캐시 갱신 실패: {e}")
 

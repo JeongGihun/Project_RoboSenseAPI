@@ -1,7 +1,9 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-import os, logging, asyncpg
+import os
+import logging
+import asyncpg
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)

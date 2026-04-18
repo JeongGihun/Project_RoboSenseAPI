@@ -1,5 +1,6 @@
 from locust import HttpUser, task, constant
-import random, time
+import random
+import time
 from datetime import datetime
 
 def generate_sensor_payload(robot_id, timestamp) :

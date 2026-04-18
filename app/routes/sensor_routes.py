@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Query
+from fastapi import APIRouter, Depends, status, HTTPException
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
 from app.database import get_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,7 +6,13 @@ from app.models.db_models import SensorData
 from sqlalchemy import select
 from typing import Optional
 from app.redis_client import get_redis
-import logging, time, asyncio, json, math
+from app.auth import verify_api_key
+from app.exceptions import SensorNotFoundError
+import logging
+import time
+import asyncio
+import json
+import math
 from datetime import datetime, timezone
 import sensor_cpp
 
@@ -18,7 +24,7 @@ sensor_queue = asyncio.Queue()
 
 
 @router.post('/api/sensors', status_code=status.HTTP_201_CREATED)
-async def collect_sensor_data(data: SensorDataCreate):
+async def collect_sensor_data(data: SensorDataCreate, _key=Depends(verify_api_key)):
     try:
         redis = get_redis()
         now = time.time()
@@ -72,7 +78,8 @@ async def check_filter_data(
         robot_id: Optional[int] = None,
         sensor_type: Optional[str] = None,
         cursor_id: Optional[int] = None,
-        db: AsyncSession = Depends(get_db)):
+        db: AsyncSession = Depends(get_db),
+        _key=Depends(verify_api_key)):
     query = select(SensorData).order_by(SensorData.id.desc())
 
     if cursor_id:
@@ -100,7 +107,8 @@ async def check_filter_data(
 @router.get('/api/sensors/filtered', response_model=FilteredSensorResponse, status_code=status.HTTP_200_OK)
 async def check_filter_sensor_data(
         robot_id : int , sensor_type : str,
-        field : str, window_size : int):
+        field : str, window_size : int,
+        _key=Depends(verify_api_key)):
     # redis 가져오기
     redis = get_redis()
     key = f"sensor:{robot_id}:{sensor_type}"
@@ -161,13 +169,13 @@ async def check_filter_sensor_data(
     return response_data
 
 @router.get('/api/sensors/{id}', response_model=SensorResponse, status_code=status.HTTP_200_OK)
-async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db)):
+async def check_filter_specific_data(id: int, db: AsyncSession = Depends(get_db), _key=Depends(verify_api_key)):
     query = select(SensorData)
     query = query.where(SensorData.id == id)
     result = await db.execute(query)
     sensor = result.scalar_one_or_none()
     if sensor is None:
-        raise HTTPException(status_code=404, detail="해당 로봇의 센서 데이터는 존재하지 않음")
+        raise SensorNotFoundError({"sensor_id": id})
     return sensor
 
 def sensor_to_tuple(sensor:SensorData) -> tuple :
