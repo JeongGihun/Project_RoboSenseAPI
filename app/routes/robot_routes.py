@@ -6,7 +6,7 @@ from app.models.db_models import Robot, SensorData
 from sqlalchemy import select, delete, text
 from typing import List, Optional
 from app.redis_client import get_redis
-from app.auth import verify_api_key
+from app.auth import verify_api_key, verify_admin_key
 from app.exceptions import RobotNotFoundError
 from datetime import datetime, timezone
 import json
@@ -160,7 +160,7 @@ async def robot_data_specific_list(id : int, db : AsyncSession = Depends(get_db)
 
 
 @router.delete('/api/reset', status_code = status.HTTP_200_OK)
-async def reset_all_data(db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
+async def reset_all_data(db : AsyncSession = Depends(get_db), _admin: str = Depends(verify_admin_key)) :
     """모든 센서 데이터와 로봇 데이터를 초기화합니다."""
     try :
         redis = get_redis()
