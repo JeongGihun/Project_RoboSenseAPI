@@ -42,3 +42,10 @@ CLAUDE.md
 .coverage
 .pytest_cache/
 htmlcov/
+
+# C++ build artifacts
+build/
+*.obj
+*.pyd
+*.exp
+*.lib
