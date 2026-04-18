@@ -90,9 +90,10 @@ async def get_stats(
         if cached_stats :
             ttl = await redis.ttl(cache_key)
 
-            # 캐시 워밍. 10초 이하 남을 경우 갱신
+            # 캐시 워밍. 10초 이하 남으면 leader 1개만 갱신 (thundering herd 방지)
             if ttl < 10 :
-                asyncio.create_task(regenerate_stats_cache(db))
+                if await redis.set("stats:warming", "1", nx=True, ex=15) :
+                    asyncio.create_task(regenerate_stats_cache(db))
             return json.loads(cached_stats)
 
     if start_time is None :
