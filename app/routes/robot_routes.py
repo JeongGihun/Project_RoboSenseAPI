@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from app.models.robot import RobotCreate, RobotResponse, RobotDetailResponse, RobotStatusUpdate
 from app.database import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,7 +20,6 @@ router = APIRouter()
 @router.post('/api/robots', response_model = RobotResponse, status_code = status.HTTP_201_CREATED)
 async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
     try :
-        # redis 가져오기
         redis = get_redis()
 
         db_robot = Robot(
@@ -32,14 +31,13 @@ async def registration_robot_data(data : RobotCreate, db : AsyncSession = Depend
         db.add(db_robot)
         await db.commit()
 
-        # 캐시 무효화
         await redis.delete("robots:all")
         await redis.delete(f"robots:status:{data.status}")
         return db_robot
 
-    except Exception as e :
+    except Exception :
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"로봇 등록 실패 : {str(e)}")
+        raise
 
 @router.put('/api/robots/{robot_id}', response_model=RobotResponse, status_code = status.HTTP_200_OK)
 async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, db : AsyncSession = Depends(get_db), _key=Depends(verify_api_key)) :
@@ -67,11 +65,11 @@ async def update_robot_status(robot_id : int, update_data : RobotStatusUpdate, d
 
         return robot
 
-    except (HTTPException, RobotNotFoundError) :
+    except RobotNotFoundError :
         raise
-    except Exception as e :
+    except Exception :
         await db.rollback()
-        raise HTTPException(status_code=500, detail = f"로봇 상태 업데이트 실패 : {str(e)}")
+        raise
 
 
 @router.get('/api/robots', response_model = List[RobotResponse], status_code = status.HTTP_200_OK)
@@ -174,11 +172,10 @@ async def reset_all_data(db : AsyncSession = Depends(get_db), _admin: str = Depe
         await db.execute(text("ALTER SEQUENCE sensor_data_id_seq RESTART WITH 1"))
         await db.commit()
 
-        # Redis 캐시 전체 초기화
         await redis.flushdb()
 
         return {"message" : "모든 데이터가 초기화되었습니다.", "status" : "success"}
 
-    except Exception as e :
+    except Exception :
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"데이터 초기화 실패 : {str(e)}")
+        raise
