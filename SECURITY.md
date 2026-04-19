@@ -39,6 +39,14 @@ RoboSenseAPI의 보안 정책과 구현 내역을 정리한 문서.
 - `.env` 는 `.gitignore` 처리. 레포에 커밋된 이력 없음
 - 운영 배포 시 `ADMIN_KEY`, `POSTGRES_PASSWORD`는 EC2 환경변수로 별도 주입 (아래 체크리스트 참조)
 
+### EC2 접근 정책
+- **HTTP (80)**: `0.0.0.0/0` 허용 (랜딩페이지 공개 + API는 API Key로 보호)
+- **SSH (22)**: `0.0.0.0/0` 허용
+  - 이유: GitHub Actions 러너 IP가 매 실행마다 달라서 화이트리스트 운영 불가
+  - 완화: `PasswordAuthentication no` 로 비밀번호 로그인 차단, `.pem` 키 파일로만 접근
+  - 트레이드오프 인지: 운영급이면 AWS Systems Manager Session Manager 또는 self-hosted runner로 전환 권장
+- **PostgreSQL (5432) / Redis (6379)**: 인바운드 차단. Docker 내부망으로만 접근
+
 ## 배포 전 체크리스트
 
 배포 파이프라인(`.github/workflows/deploy.yml`) 실행 전 아래 항목 확인.
@@ -64,4 +72,4 @@ RoboSenseAPI의 보안 정책과 구현 내역을 정리한 문서.
 | 날짜 | 내용 |
 |------|------|
 | 2026-04-18 | API Key 인증, Admin Key 분리, CORS 화이트리스트, SETNX 락 도입 |
-| 2026-04-19 | DB 포트 외부 공개 차단, `pg_hba` 0.0.0.0/0 제거, 에러 메시지 마스킹, `limit` 상한 추가 |
+| 2026-04-19 | DB 포트 외부 공개 차단, `pg_hba` 0.0.0.0/0 제거, 에러 메시지 마스킹, `limit` 상한 추가, EC2 접근 정책 명시 |
