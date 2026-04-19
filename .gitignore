@@ -38,6 +38,9 @@ Thumbs.db
 CLAUDE.md
 .claude/
 
+# 내부 보안 문서
+SECURITY.md
+
 # Test artifacts
 .coverage
 .pytest_cache/
