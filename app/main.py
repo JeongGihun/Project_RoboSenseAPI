@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import sensor_routes, robot_routes, stats_routes, admin_routes
+from app.routes import sensor_routes, robot_routes, stats_routes, admin_routes, demo_routes
 from app.database import engine, Base, init_asyncpg_pool, close_asyncpg_pool, get_asyncpg_pool
 from app.middleware import RequestIDMiddleware
 from app.logging_config import RequestIDFilter
@@ -77,6 +77,7 @@ app.include_router(sensor_routes.router)
 app.include_router(robot_routes.router)
 app.include_router(stats_routes.router)
 app.include_router(admin_routes.router)
+app.include_router(demo_routes.router)
 
 @app.get("/", response_class=HTMLResponse)
 def root() :
