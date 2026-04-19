@@ -15,7 +15,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/robosense-api
+          IMAGE=ghcr.io/jeonggihun/robosense-api
           docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
           docker push $IMAGE:${{ github.sha }}
           docker push $IMAGE:latest
@@ -27,12 +27,14 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/robosense
+            set -e
+            cd ~/Project_RoboSenseAPI
+            git pull origin main
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d
-            sleep 10
-            curl -f http://localhost/health || (echo "Health check failed, rolling back" && docker compose down && docker compose up -d --force-recreate && exit 1)
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+            sleep 15
+            curl -f http://localhost/health || (echo "Health check failed, rolling back" && docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d --force-recreate && exit 1)
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1
