@@ -155,7 +155,7 @@ async def client():
     original_pool = db_module.asyncpg_pool
     db_module.asyncpg_pool = mock_pool
 
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         # 테스트용 API Key 자동 발급
         issue_resp = await ac.post(

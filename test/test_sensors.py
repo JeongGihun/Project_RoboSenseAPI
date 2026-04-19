@@ -118,6 +118,18 @@ async def test_get_sensors_filter_sensor_type(client, db_session):
     assert data["data"][0]["sensor_type"] == "GPS"
 
 
+async def test_get_sensors_limit_exceeds_max(client):
+    """limit 상한(1000) 초과 시 422"""
+    response = await client.get("/api/sensors?limit=10000")
+    assert response.status_code == 422
+
+
+async def test_get_sensors_limit_zero(client):
+    """limit 하한(1) 미만 시 422"""
+    response = await client.get("/api/sensors?limit=0")
+    assert response.status_code == 422
+
+
 async def test_get_sensors_pagination(client, db_session):
     """커서 기반 페이지네이션"""
     robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
