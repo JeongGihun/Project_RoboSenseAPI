@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, Query
 from app.models.sensor import SensorResponse, SensorDataCreate, SensorListResponse, FilteredSensorResponse
 from app.database import get_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,56 +25,51 @@ sensor_queue = asyncio.Queue()
 
 @router.post('/api/sensors', status_code=status.HTTP_201_CREATED)
 async def collect_sensor_data(data: SensorDataCreate, _key=Depends(verify_api_key)):
-    try:
-        redis = get_redis()
-        now = time.time()
+    redis = get_redis()
+    now = time.time()
 
-        sensors_to_add = [
-            SensorData(
-                robot_id=data.robot_id,
-                sensor_type=sensor_item.sensor_type,
-                timestamp=data.timestamp,
-                raw_data=sensor_cpp.serialize_sensor_data(
-                    sensor_item.data,
-                    sensor_item.sensor_type
-                ) if sensor_item.data else None
-            )
-            for sensor_item in data.sensors
-        ]
+    sensors_to_add = [
+        SensorData(
+            robot_id=data.robot_id,
+            sensor_type=sensor_item.sensor_type,
+            timestamp=data.timestamp,
+            raw_data=sensor_cpp.serialize_sensor_data(
+                sensor_item.data,
+                sensor_item.sensor_type
+            ) if sensor_item.data else None
+        )
+        for sensor_item in data.sensors
+    ]
 
-        for sensor in sensors_to_add :
-            sensor_queue.put_nowait(sensor)
+    for sensor in sensors_to_add :
+        sensor_queue.put_nowait(sensor)
 
-        for sensor_item in sensors_to_add :
-            if sensor_item.raw_data is None :
-                continue
-            key = f"sensor:{data.robot_id}:{sensor_item.sensor_type}"
-            await redis.lpush(key, json.dumps(sensor_item.raw_data))
-            await redis.ltrim(key, 0, 4)
-            await redis.expire(key, 10)
+    for sensor_item in sensors_to_add :
+        if sensor_item.raw_data is None :
+            continue
+        key = f"sensor:{data.robot_id}:{sensor_item.sensor_type}"
+        await redis.lpush(key, json.dumps(sensor_item.raw_data))
+        await redis.ltrim(key, 0, 4)
+        await redis.expire(key, 10)
 
-        # 캐시 무효화
-        if now - last_invalidation.get(data.robot_id, 0) > 10:
-            await redis.delete(f"robot:{data.robot_id}:detail")
-            last_invalidation[data.robot_id] = now
+    if now - last_invalidation.get(data.robot_id, 0) > 10:
+        await redis.delete(f"robot:{data.robot_id}:detail")
+        last_invalidation[data.robot_id] = now
 
-        if now - last_invalidation.get('stats', 0) > 60:
-            await redis.delete("stats:recent")
-            last_invalidation['stats'] = now
+    if now - last_invalidation.get('stats', 0) > 60:
+        await redis.delete("stats:recent")
+        last_invalidation['stats'] = now
 
-        return {
-            "status": "success",
-            "robot_id": data.robot_id,
-            "queued_count": len(data.sensors)
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"센서 데이터 등록 실패: {str(e)}")
+    return {
+        "status": "success",
+        "robot_id": data.robot_id,
+        "queued_count": len(data.sensors)
+    }
 
 
 @router.get('/api/sensors', response_model=SensorListResponse, status_code=status.HTTP_200_OK)
 async def check_filter_data(
-        limit: int = 100,
+        limit: int = Query(100, ge=1, le=1000),
         robot_id: Optional[int] = None,
         sensor_type: Optional[str] = None,
         cursor_id: Optional[int] = None,
