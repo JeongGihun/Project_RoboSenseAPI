@@ -166,6 +166,7 @@ footer a:hover{text-decoration:underline}
   <div class="section-title">API 테스트</div>
   <p class="section-desc">실제 서버에 요청을 보내고 응답을 확인하세요. 모든 기능은 로봇 등록 후 사용할 수 있습니다.</p>
   <div class="flow-banner"><div class="icon">&#9888;</div><div><strong>Step 1 필수</strong> &#8212; 센서 데이터 수집, 필터링, 통계 등 모든 기능은 <strong>로봇 등록(POST /api/robots)</strong> 이후에만 사용할 수 있습니다.</div></div>
+  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25)"><div class="icon">&#128274;</div><div><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 버튼 클릭 시 401이 정상 응답입니다.</div></div>
   <div class="flow-steps">
     <div class="flow-step"><div class="flow-step-num">1</div><h4>로봇 등록</h4><p>POST /api/robots</p></div><div class="flow-connector">&#8594;</div>
     <div class="flow-step"><div class="flow-step-num">2</div><h4>센서 데이터 수집</h4><p>POST /api/sensors</p></div><div class="flow-connector">&#8594;</div>
@@ -301,7 +302,7 @@ function updateRL(){var el=document.getElementById('registeredRobots');if(!R.len
 var MODELS=['Warehouse-Bot-v2','Patrol-Bot-X1','Cargo-Mover-3K','Scout-Mini','HeavyLift-900','SpeedRunner-S','Inspector-Pro','CleanBot-Z','Picker-Alpha','Navigator-V5'];
 var autoTimer=null,autoSentN=0,autoErrN=0,autoTotalMs=0;
 
-function postRobot(){showLoad('resp-post-robot');api('POST','/demo/robots',{name:document.getElementById('robot-name').value,model:document.getElementById('robot-model').value,status:document.getElementById('robot-status').value,battery_level:parseInt(document.getElementById('robot-battery').value)}).then(function(r){showResp('resp-post-robot',r.status,r.data,r.ms);if(r.status===201){R.push({id:r.data.id,name:r.data.name});updateRL();unlock();}}).catch(function(e){showErr('resp-post-robot',e.message);});}
+function postRobot(){showLoad('resp-post-robot');api('POST','/api/robots',{name:document.getElementById('robot-name').value,model:document.getElementById('robot-model').value,status:document.getElementById('robot-status').value,battery_level:parseInt(document.getElementById('robot-battery').value)}).then(function(r){showResp('resp-post-robot',r.status,r.data,r.ms);if(r.status===201){R.push({id:r.data.id,name:r.data.name});updateRL();unlock();}}).catch(function(e){showErr('resp-post-robot',e.message);});}
 
 function autoGenRobots(){
   showLoad('resp-post-robot');
@@ -315,7 +316,7 @@ function autoGenRobots(){
     }
     var i=count;count++;
     var statuses=['active','active','active','active','active','active','active','inactive','maintenance','active'];
-    api('POST','/demo/robots',{name:'Robot-'+String.fromCharCode(65+i),model:MODELS[i],status:statuses[i],battery_level:Math.floor(60+Math.random()*40)}).then(function(r){
+    api('POST','/api/robots',{name:'Robot-'+String.fromCharCode(65+i),model:MODELS[i],status:statuses[i],battery_level:Math.floor(60+Math.random()*40)}).then(function(r){
       if(r.status===201){ok++;R.push({id:r.data.id,name:r.data.name});results.push({id:r.data.id,name:r.data.name});}else{err++;}
       next();
     }).catch(function(){err++;next();});
@@ -334,8 +335,8 @@ function resetAllData(){
 
 function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/demo/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}
 function getRobotDetail(){showLoad('resp-get-robot-detail');api('GET','/demo/robots/'+document.getElementById('robot-detail-id').value).then(function(r){showResp('resp-get-robot-detail',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-robot-detail',e.message);});}
-function putRobot(){showLoad('resp-put-robot');var id=document.getElementById('robot-update-id').value;api('PUT','/demo/robots/'+id,{status:document.getElementById('robot-update-status').value,battery_level:parseInt(document.getElementById('robot-update-battery').value)}).then(function(r){showResp('resp-put-robot',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-put-robot',e.message);});}
-function postSensor(){showLoad('resp-post-sensor');try{api('POST','/demo/sensors',JSON.parse(document.getElementById('sensor-body').value)).then(function(r){showResp('resp-post-sensor',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-post-sensor',e.message);});}catch(e){showErr('resp-post-sensor','Invalid JSON');}}
+function putRobot(){showLoad('resp-put-robot');var id=document.getElementById('robot-update-id').value;api('PUT','/api/robots/'+id,{status:document.getElementById('robot-update-status').value,battery_level:parseInt(document.getElementById('robot-update-battery').value)}).then(function(r){showResp('resp-put-robot',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-put-robot',e.message);});}
+function postSensor(){showLoad('resp-post-sensor');try{api('POST','/api/sensors',JSON.parse(document.getElementById('sensor-body').value)).then(function(r){showResp('resp-post-sensor',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-post-sensor',e.message);});}catch(e){showErr('resp-post-sensor','Invalid JSON');}}
 
 function genSensorData(rid){
   var now=new Date().toISOString().slice(0,19);
@@ -372,7 +373,7 @@ function sendAutoTick(){
   var rid=R[Math.floor(Math.random()*R.length)].id;
   var data=genSensorData(rid);
   document.getElementById('sensor-body').value=JSON.stringify(data,null,2);
-  api('POST','/demo/sensors',data).then(function(r){
+  api('POST','/api/sensors',data).then(function(r){
     autoSentN++;
     if(r.status>=200&&r.status<300){autoTotalMs+=r.ms;}else{autoErrN++;}
     document.getElementById('autoSent').textContent=autoSentN;
