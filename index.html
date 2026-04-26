@@ -166,6 +166,7 @@ footer a:hover{text-decoration:underline}
   <div class="section-title">API 테스트</div>
   <p class="section-desc">실제 서버에 요청을 보내고 응답을 확인하세요. 모든 기능은 로봇 등록 후 사용할 수 있습니다.</p>
   <div class="flow-banner"><div class="icon">&#9888;</div><div><strong>Step 1 필수</strong> &#8212; 센서 데이터 수집, 필터링, 통계 등 모든 기능은 <strong>로봇 등록(POST /api/robots)</strong> 이후에만 사용할 수 있습니다.</div></div>
+  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25)"><div class="icon">&#128274;</div><div><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 버튼 클릭 시 401이 정상 응답입니다.</div></div>
   <div class="flow-steps">
     <div class="flow-step"><div class="flow-step-num">1</div><h4>로봇 등록</h4><p>POST /api/robots</p></div><div class="flow-connector">&#8594;</div>
     <div class="flow-step"><div class="flow-step-num">2</div><h4>센서 데이터 수집</h4><p>POST /api/sensors</p></div><div class="flow-connector">&#8594;</div>
@@ -332,8 +333,8 @@ function resetAllData(){
   }).catch(function(e){showErr('resp-post-robot',e.message);});
 }
 
-function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/api/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}
-function getRobotDetail(){showLoad('resp-get-robot-detail');api('GET','/api/robots/'+document.getElementById('robot-detail-id').value).then(function(r){showResp('resp-get-robot-detail',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-robot-detail',e.message);});}
+function getRobots(){showLoad('resp-get-robots');var s=document.getElementById('robots-list-status').value;api('GET','/demo/robots'+(s?'?status='+s:'')).then(function(r){showResp('resp-get-robots',r.status,r.data,r.ms);if(r.status===200&&Array.isArray(r.data)&&r.data.length){R=r.data.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(e){showErr('resp-get-robots',e.message);});}
+function getRobotDetail(){showLoad('resp-get-robot-detail');api('GET','/demo/robots/'+document.getElementById('robot-detail-id').value).then(function(r){showResp('resp-get-robot-detail',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-robot-detail',e.message);});}
 function putRobot(){showLoad('resp-put-robot');var id=document.getElementById('robot-update-id').value;api('PUT','/api/robots/'+id,{status:document.getElementById('robot-update-status').value,battery_level:parseInt(document.getElementById('robot-update-battery').value)}).then(function(r){showResp('resp-put-robot',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-put-robot',e.message);});}
 function postSensor(){showLoad('resp-post-sensor');try{api('POST','/api/sensors',JSON.parse(document.getElementById('sensor-body').value)).then(function(r){showResp('resp-post-sensor',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-post-sensor',e.message);});}catch(e){showErr('resp-post-sensor','Invalid JSON');}}
 
@@ -382,15 +383,15 @@ function sendAutoTick(){
   }).catch(function(){autoErrN++;document.getElementById('autoErrors').textContent=autoErrN;});
 }
 
-function getSensors(){showLoad('resp-get-sensors');var p=[],rid=parseInt(document.getElementById('sensor-list-robot-id').value),st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid&&rid>0)p.push('robot_id='+rid);else if(rid&&rid<=0){showErr('resp-get-sensors','Robot ID는 1 이상이어야 합니다');return;}if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/api/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
-function getFiltered(){showLoad('resp-get-filtered');api('GET','/api/sensors/filtered?robot_id='+document.getElementById('filter-robot-id').value+'&sensor_type='+document.getElementById('filter-sensor-type').value+'&field='+document.getElementById('filter-field').value+'&window_size='+document.getElementById('filter-window').value).then(function(r){showResp('resp-get-filtered',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-filtered',e.message);});}
-function getStats(){showLoad('resp-get-stats');var p=[],s=document.getElementById('stats-start').value,e=document.getElementById('stats-end').value;if(s)p.push('start_time='+new Date(s).toISOString());if(e)p.push('end_time='+new Date(e).toISOString());api('GET','/api/stats'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-stats',r.status,r.data,r.ms);}).catch(function(e2){showErr('resp-get-stats',e2.message);});}
+function getSensors(){showLoad('resp-get-sensors');var p=[],rid=parseInt(document.getElementById('sensor-list-robot-id').value),st=document.getElementById('sensor-list-type').value,lim=document.getElementById('sensor-list-limit').value;if(rid&&rid>0)p.push('robot_id='+rid);else if(rid&&rid<=0){showErr('resp-get-sensors','Robot ID는 1 이상이어야 합니다');return;}if(st)p.push('sensor_type='+st);if(lim)p.push('limit='+lim);api('GET','/demo/sensors'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-sensors',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-sensors',e.message);});}
+function getFiltered(){showLoad('resp-get-filtered');api('GET','/demo/sensors/filtered?robot_id='+document.getElementById('filter-robot-id').value+'&sensor_type='+document.getElementById('filter-sensor-type').value+'&field='+document.getElementById('filter-field').value+'&window_size='+document.getElementById('filter-window').value).then(function(r){showResp('resp-get-filtered',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-get-filtered',e.message);});}
+function getStats(){showLoad('resp-get-stats');var p=[],s=document.getElementById('stats-start').value,e=document.getElementById('stats-end').value;if(s)p.push('start_time='+new Date(s).toISOString());if(e)p.push('end_time='+new Date(e).toISOString());api('GET','/demo/stats'+(p.length?'?'+p.join('&'):'')).then(function(r){showResp('resp-get-stats',r.status,r.data,r.ms);}).catch(function(e2){showErr('resp-get-stats',e2.message);});}
 function healthCheck(){showLoad('resp-health');api('GET','/health_check').then(function(r){showResp('resp-health',r.status,r.data,r.ms);}).catch(function(e){showErr('resp-health',e.message);});}
 function toLocal(d){return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);}
 var pageLoad=new Date();
 document.getElementById('stats-start').value=toLocal(pageLoad);
 document.getElementById('stats-end').value=toLocal(new Date(pageLoad.getTime()+3600000));
-fetch(B+'/api/robots').then(function(r){return r.json();}).then(function(d){if(Array.isArray(d)&&d.length){R=d.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(){});
+fetch(B+'/demo/robots').then(function(r){return r.json();}).then(function(d){if(Array.isArray(d)&&d.length){R=d.map(function(x){return{id:x.id,name:x.name};});updateRL();unlock();}}).catch(function(){});
 </script>
 </body>
 </html>
