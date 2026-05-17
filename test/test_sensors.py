@@ -189,3 +189,58 @@ async def test_get_sensor_by_id_not_found(client):
     """존재하지 않는 센서 ID → 404"""
     response = await client.get("/api/sensors/99999")
     assert response.status_code == 404
+
+
+# === GET /api/sensors/filtered ===
+
+async def test_get_filtered_sensor_no_data(client, db_session):
+    """Redis에 데이터 없을 때 빈 결과 반환"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    response = await client.get(
+        f"/api/sensors/filtered?robot_id={robot.id}&sensor_type=IMU&field=mocked&window_size=2"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["original_data"] == []
+    assert data["filtered_data"] == []
+    assert data["robot_id"] == robot.id
+    assert data["sensor_type"] == "IMU"
+
+
+async def test_get_filtered_sensor_with_data(client, db_session):
+    """Redis에 센서 데이터 있을 때 필터링 결과 반환"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    await client.post("/api/sensors", json={
+        "robot_id": robot.id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "sensors": [
+            {"sensor_type": "IMU", "data": {
+                "acceleration": {"x": 1.0, "y": 2.0, "z": 3.0},
+                "gyroscope": {"x": 0.1, "y": 0.2, "z": 0.3}
+            }}
+        ]
+    })
+
+    response = await client.get(
+        f"/api/sensors/filtered?robot_id={robot.id}&sensor_type=IMU&field=mocked&window_size=2"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["robot_id"] == robot.id
+    assert data["sensor_type"] == "IMU"
+    assert data["field"] == "mocked"
+    assert data["window_size"] == 2
+    assert "original_data" in data
+    assert "filtered_data" in data
+
+
+async def test_get_filtered_sensor_missing_params(client):
+    """필수 파라미터 누락 시 422"""
+    response = await client.get("/api/sensors/filtered?robot_id=1")
+    assert response.status_code == 422

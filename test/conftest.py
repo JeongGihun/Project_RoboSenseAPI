@@ -5,6 +5,11 @@ from unittest.mock import MagicMock, AsyncMock
 
 os.environ.setdefault("ADMIN_KEY", "test-admin-key")
 
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "sqlite+aiosqlite://"
+)
+
 # sensor_cpp C++ 모듈 mock — 반드시 app import 전에 실행
 mock_sensor_cpp = MagicMock()
 mock_sensor_cpp.serialize_sensor_data.return_value = {"mocked": True}
@@ -20,6 +25,7 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
 import app.redis_client as redis_module
 import app.database as db_module
@@ -102,11 +108,15 @@ class FakeRedis:
         self._ttls.clear()
 
 
-# SQLite in-memory 테스트 엔진
-test_engine = create_async_engine(
-    "sqlite+aiosqlite://",
-    connect_args={"check_same_thread": False},
-)
+# 테스트 엔진 (SQLite 기본, 환경변수로 PostgreSQL 전환 가능)
+# PostgreSQL은 NullPool 사용 — 테스트마다 새 커넥션, 이벤트 루프 충돌 방지
+if TEST_DATABASE_URL.startswith("sqlite"):
+    test_engine = create_async_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+    )
+else:
+    test_engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
 
 TestSession = sessionmaker(
     test_engine, class_=AsyncSession, expire_on_commit=False
@@ -115,12 +125,16 @@ TestSession = sessionmaker(
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
-    """매 테스트마다 테이블 생성/삭제"""
+    """매 테스트마다 테이블 생성 및 데이터 초기화"""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
+        if TEST_DATABASE_URL.startswith("sqlite"):
+            await conn.run_sync(Base.metadata.drop_all)
+        else:
+            for table in reversed(Base.metadata.sorted_tables):
+                await conn.execute(table.delete())
 
 
 @pytest_asyncio.fixture

@@ -12,3 +12,5 @@ per-file-ignores = {"test/conftest.py" = ["E402", "F401"]}
 
 [tool.coverage.run]
 omit = ["app/utils/retry.py", "app/redis_client.py"]
+branch = true
+concurrency = ["thread"]
