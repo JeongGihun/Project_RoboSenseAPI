@@ -3,7 +3,7 @@ from app.models.sensor import SensorResponse, SensorDataCreate, SensorListRespon
 from app.database import get_db, get_asyncpg_pool
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.db_models import SensorData
-from sqlalchemy import select
+from sqlalchemy import select, func
 from typing import Optional
 from app.redis_client import get_redis
 from app.auth import verify_api_key
@@ -70,33 +70,37 @@ async def collect_sensor_data(data: SensorDataCreate, _key=Depends(verify_api_ke
 @router.get('/api/sensors', response_model=SensorListResponse, status_code=status.HTTP_200_OK)
 async def check_filter_data(
         limit: int = Query(100, ge=1, le=1000),
+        page: int = Query(1, ge=1),
         robot_id: Optional[int] = None,
         sensor_type: Optional[str] = None,
-        cursor_id: Optional[int] = None,
+        start_time: Optional[datetime] = None,
+        end_time: Optional[datetime] = None,
         db: AsyncSession = Depends(get_db),
         _key=Depends(verify_api_key)):
     query = select(SensorData).order_by(SensorData.id.desc())
 
-    if cursor_id:
-        query = query.where(cursor_id > SensorData.id)
     if robot_id:
         query = query.where(SensorData.robot_id == robot_id)
     if sensor_type:
         query = query.where(SensorData.sensor_type == sensor_type)
+    if start_time:
+        query = query.where(SensorData.timestamp >= start_time)
+    if end_time:
+        query = query.where(SensorData.timestamp <= end_time)
 
-    query = query.limit(limit + 1)
+    offset = (page - 1) * limit
+    total_result = await db.execute(select(func.count()).select_from(query.subquery()))
+    total = total_result.scalar()
+
+    query = query.offset(offset).limit(limit)
     result = await db.execute(query)
     sensors = result.scalars().all()
 
-    has_more = len(sensors) > limit
-    if has_more:
-        sensors = sensors[:limit]
-    next_cursor = sensors[-1].id if sensors and has_more else None
-
     return {
         "data": sensors,
-        "next_cursor": next_cursor,
-        "has_more": has_more
+        "total": total,
+        "page": page,
+        "has_more": offset + len(sensors) < total
     }
 
 @router.get('/api/sensors/filtered', response_model=FilteredSensorResponse, status_code=status.HTTP_200_OK)
