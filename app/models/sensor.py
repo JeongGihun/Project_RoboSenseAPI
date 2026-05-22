@@ -28,7 +28,8 @@ class SensorResponse(BaseModel) :
 
 class SensorListResponse(BaseModel) :
     data : List[SensorResponse]
-    next_cursor : Optional[int]
+    total : int
+    page : int
     has_more : bool
 
 class SensorDataCreate(BaseModel) :
