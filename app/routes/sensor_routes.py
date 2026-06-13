@@ -79,6 +79,12 @@ async def check_filter_data(
         _key=Depends(verify_api_key)):
     query = select(SensorData).order_by(SensorData.id.desc())
 
+    # tz 없는 입력은 UTC로 간주 — TIMESTAMPTZ 컬럼과 비교 시 타임존 어긋남 방지
+    if start_time and start_time.tzinfo is None:
+        start_time = start_time.replace(tzinfo=timezone.utc)
+    if end_time and end_time.tzinfo is None:
+        end_time = end_time.replace(tzinfo=timezone.utc)
+
     if robot_id:
         query = query.where(SensorData.robot_id == robot_id)
     if sensor_type:

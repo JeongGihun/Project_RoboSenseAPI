@@ -156,9 +156,22 @@ async def client():
     app.dependency_overrides[get_db] = override_get_db
 
     # get_redis는 직접 호출이므로 모듈 변수 교체
-    fake_redis = FakeRedis()
+    # TEST_REDIS_HOST 있으면 실제 Redis(CI), 없으면 FakeRedis(로컬 기본)
+    test_redis_host = os.getenv("TEST_REDIS_HOST")
+    if test_redis_host:
+        from redis.asyncio import Redis
+        test_redis = Redis(
+            host=test_redis_host,
+            port=int(os.getenv("TEST_REDIS_PORT", "6379")),
+            db=0,
+            decode_responses=True,
+            encoding="utf-8",
+        )
+        await test_redis.flushdb()
+    else:
+        test_redis = FakeRedis()
     original_redis = redis_module.redis_client
-    redis_module.redis_client = fake_redis
+    redis_module.redis_client = test_redis
 
     # asyncpg_pool은 health_check에서 사용 — mock 주입
     mock_pool = MagicMock()
@@ -183,5 +196,8 @@ async def client():
 
     # 정리
     app.dependency_overrides.clear()
+    if test_redis_host:
+        await test_redis.flushdb()
+        await test_redis.aclose()
     redis_module.redis_client = original_redis
     db_module.asyncpg_pool = original_pool
