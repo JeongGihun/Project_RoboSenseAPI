@@ -9,7 +9,6 @@ from app.redis_client import get_redis
 from app.auth import verify_api_key
 from app.exceptions import SensorNotFoundError
 import logging
-import time
 import asyncio
 import json
 import math
@@ -19,14 +18,12 @@ import sensor_cpp
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-last_invalidation = {}
 sensor_queue = asyncio.Queue()
 
 
 @router.post('/api/sensors', status_code=status.HTTP_201_CREATED)
 async def collect_sensor_data(data: SensorDataCreate, _key=Depends(verify_api_key)):
     redis = get_redis()
-    now = time.time()
 
     sensors_to_add = [
         SensorData(
@@ -52,13 +49,13 @@ async def collect_sensor_data(data: SensorDataCreate, _key=Depends(verify_api_ke
         await redis.ltrim(key, 0, 4)
         await redis.expire(key, 10)
 
-    if now - last_invalidation.get(data.robot_id, 0) > 10:
+    # 무효화 스로틀은 Redis로 공유. 프로세스 로컬 dict는 replica마다 따로 놀아
+    # "10초에 1번"이 프로세스 수만큼 중복 무효화됨. SETNX로 윈도우를 선점한 1개만 삭제.
+    if await redis.set(f"invalidate:robot:{data.robot_id}:detail", "1", nx=True, ex=10):
         await redis.delete(f"robot:{data.robot_id}:detail")
-        last_invalidation[data.robot_id] = now
 
-    if now - last_invalidation.get('stats', 0) > 60:
+    if await redis.set("invalidate:stats", "1", nx=True, ex=60):
         await redis.delete("stats:recent")
-        last_invalidation['stats'] = now
 
     return {
         "status": "success",
