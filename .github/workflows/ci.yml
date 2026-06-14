@@ -44,6 +44,7 @@ jobs:
       - name: Test
         run: pytest --cov=app --cov-report=term-missing -v
         env:
+          TEST_DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test_db
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: test
@@ -51,4 +52,6 @@ jobs:
           POSTGRES_DB: test_db
           REDIS_HOST: localhost
           REDIS_PORT: 6379
+          TEST_REDIS_HOST: localhost
+          TEST_REDIS_PORT: 6379
           ADMIN_KEY: ci-admin-key
