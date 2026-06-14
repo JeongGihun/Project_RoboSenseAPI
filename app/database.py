@@ -20,7 +20,7 @@ POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
 POSTGRES_DB = os.getenv("POSTGRES_DB")
 SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
-engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False, pool_size=10, max_overflow=50, pool_timeout=30, pool_recycle=3600, pool_pre_ping=True)
+engine = create_async_engine(SQLALCHEMY_DATABASE_URL, echo=False, pool_size=2, max_overflow=3, pool_timeout=30, pool_recycle=3600, pool_pre_ping=True)
 async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 Base = declarative_base()
@@ -38,7 +38,7 @@ async def init_asyncpg_pool():
     asyncpg_pool = await asyncpg.create_pool(
         host=POSTGRES_HOST, port=POSTGRES_PORT,
         user=POSTGRES_USER, password=POSTGRES_PASSWORD,
-        database=POSTGRES_DB, min_size=10, max_size=50
+        database=POSTGRES_DB, min_size=2, max_size=3
     )
 
 async def close_asyncpg_pool():
