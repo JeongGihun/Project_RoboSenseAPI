@@ -117,6 +117,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .perf-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
 .perf-card .value{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--accent-light),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .perf-card .label{font-size:.85rem;color:var(--text-muted);margin-top:.25rem}
+.tps-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem 1.5rem 1rem;margin-top:1.5rem}
+.tps-dot{cursor:pointer}
+.tps-tooltip{position:absolute;display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;font-size:.78rem;line-height:1.5;max-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:20;pointer-events:none}
+.tps-tooltip strong{color:var(--accent-light)}
 .robot-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
 .robot-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;background:var(--surface2);border:1px solid var(--border);border-radius:100px;font-size:.78rem}
 .robot-chip .chip-id{color:var(--accent-light);font-weight:600;font-family:'Courier New',monospace}
@@ -159,6 +163,17 @@ footer a:hover{text-decoration:underline}
     <div class="tech-card"><h4>Docker Compose</h4><p>멀티 컨테이너 오케스트레이션, 환경 일관성</p></div>
     <div class="tech-card"><h4>AWS EC2</h4><p>실제 배포 환경에서 TPS 부하 테스트</p></div>
     <div class="tech-card"><h4>Locust</h4><p>점진적 부하 테스트 (100 &#8594; 5,000 동시 접속)</p></div>
+  </div>
+</section>
+<section class="section">
+  <div class="section-label">Live Snapshot</div>
+  <div class="section-title">실시간 현황</div>
+  <p class="section-desc">위 아키텍처가 지금 실제로 돌아가는 상태입니다. <span id="liveUpdated">-</span> 기준, 5초마다 갱신됩니다.</p>
+  <div class="perf-grid">
+    <div class="perf-card"><div class="value" id="liveActiveRobots">&#8211;</div><div class="label">활성 로봇 / 전체</div></div>
+    <div class="perf-card"><div class="value" id="liveAvgBattery">&#8211;</div><div class="label">평균 배터리</div></div>
+    <div class="perf-card"><div class="value" id="liveNullRate">&#8211;</div><div class="label">평균 Null Rate</div></div>
+    <div class="perf-card"><div class="value" id="liveThroughput">&#8211;</div><div class="label">실시간 수집률 (건/분)</div></div>
   </div>
 </section>
 <section class="section" id="playground">
@@ -285,12 +300,97 @@ footer a:hover{text-decoration:underline}
     <div class="perf-card"><div class="value">Cache</div><div class="label">Redis Cache-Aside<br>TTL 10s~60s 자동 갱신</div></div>
     <div class="perf-card"><div class="value">GZip</div><div class="label">응답 압축 미들웨어<br>1KB 이상 자동 압축</div></div>
   </div>
+  <div style="margin-top:3rem;">
+    <div class="section-label">Load Test Journal</div>
+    <div class="section-title">TPS 변화 기록</div>
+    <p class="section-desc" style="margin-bottom:1rem;">Locust 부하 테스트로 측정한 TPS 변화. 모든 변경이 상승으로 이어지진 않았습니다 &#8212; 포인트에 마우스를 올려보세요.</p>
+  </div>
+  <div class="tps-chart-wrap"><div id="tpsChart"></div></div>
+  <div class="tps-tooltip" id="tpsTooltip"></div>
 </section>
 <footer><p>Built by <strong>JeongGihun</strong> &#183; <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank">GitHub</a></p></footer>
 <script>
 var B=location.origin,R=[];
 function checkServer(){var d=document.getElementById('statusDot'),t=document.getElementById('statusText');fetch(B+'/health_check').then(function(r){if(r.ok){d.className='status-dot online';t.textContent='Server Online';}else{d.className='status-dot offline';t.textContent='Unhealthy';}}).catch(function(){d.className='status-dot offline';t.textContent='Server Offline';});}
 checkServer();
+
+var TPS_JOURNAL=[
+  {week:'Week 10',date:"'26.01.04",tps:26,note:'베이스라인. 커넥션풀·쿼리는 다 확인했지만 병목 지점을 못 찾은 상태'},
+  {week:'Week 12',date:"'26.01.18",tps:489,note:'Redis 캐시 + Cursor 페이지네이션 + Docker 5-replica 도입'},
+  {week:'Week 15',date:"'26.02.08",tps:1001,note:'C++ pybind11 모듈 도입. py-spy 분석: PostgreSQL이 병목 98%(CPU 600%)'},
+  {week:"'26.02~03",date:"'26.03.06",tps:1069,note:'asyncpg 도입 + 워커 병렬화'},
+  {week:'Week 19',date:"'26.03.15",tps:927,note:'read_replica + synchronous_commit 도입 → read 비중이 17%뿐이라 오버헤드만 커져 하락, 롤백'}
+];
+function renderTpsChart(){
+  var w=1000,h=280,padL=30,padR=20,padT=30,padB=40;
+  var maxTps=Math.max.apply(null,TPS_JOURNAL.map(function(p){return p.tps;}))*1.15;
+  var stepX=(w-padL-padR)/(TPS_JOURNAL.length-1);
+  var coords=TPS_JOURNAL.map(function(p,i){
+    return {x:padL+i*stepX,y:h-padB-(p.tps/maxTps)*(h-padT-padB),p:p};
+  });
+  var svg='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;overflow:visible">';
+  svg+='<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--border)"/>';
+  for(var i=1;i<coords.length;i++){
+    var down=coords[i].p.tps<coords[i-1].p.tps;
+    svg+='<line x1="'+coords[i-1].x+'" y1="'+coords[i-1].y+'" x2="'+coords[i].x+'" y2="'+coords[i].y+'" stroke="'+(down?'var(--red)':'var(--accent-light)')+'" stroke-width="2.5"'+(down?' stroke-dasharray="6,4"':'')+'/>';
+  }
+  coords.forEach(function(c,i){
+    var down=i>0&&c.p.tps<coords[i-1].p.tps;
+    var col=down?'var(--red)':'var(--accent-light)';
+    svg+='<circle class="tps-dot" data-i="'+i+'" cx="'+c.x+'" cy="'+c.y+'" r="6" fill="'+col+'" stroke="var(--bg)" stroke-width="2"/>';
+    svg+='<text x="'+c.x+'" y="'+(c.y-14)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+c.p.tps.toLocaleString()+'</text>';
+    svg+='<text x="'+c.x+'" y="'+(h-padB+20)+'" text-anchor="middle" font-size="11" fill="var(--text-dim)">'+c.p.week+'</text>';
+  });
+  svg+='</svg>';
+  // TPS_JOURNAL은 하드코딩 상수(API 응답 아님) — innerHTML 사용해도 XSS 대상 아님
+  document.getElementById('tpsChart').innerHTML=svg;
+  document.querySelectorAll('.tps-dot').forEach(function(dot){
+    dot.addEventListener('mouseenter',function(e){showTpsTip(e.target,TPS_JOURNAL[+e.target.dataset.i]);});
+    dot.addEventListener('mouseleave',function(){document.getElementById('tpsTooltip').style.display='none';});
+  });
+}
+function showTpsTip(el,p){
+  var tip=document.getElementById('tpsTooltip');
+  tip.innerHTML='<strong>'+p.week+'</strong> ('+p.date+')<br>TPS '+p.tps.toLocaleString()+'<br>'+p.note;
+  tip.style.display='block';
+  var r=el.getBoundingClientRect();
+  tip.style.left=(r.left+window.scrollX-tip.offsetWidth/2+6)+'px';
+  tip.style.top=(r.top+window.scrollY-tip.offsetHeight-10)+'px';
+}
+renderTpsChart();
+
+var liveLastTotal=null,liveLastTs=null;
+function refreshLive(){
+  api('GET','/demo/robots').then(function(r){
+    if(r.status===200&&Array.isArray(r.data)&&r.data.length){
+      var active=r.data.filter(function(x){return x.status==='active';}).length;
+      document.getElementById('liveActiveRobots').textContent=active+' / '+r.data.length;
+      var avg=r.data.reduce(function(s,x){return s+x.battery_level;},0)/r.data.length;
+      document.getElementById('liveAvgBattery').textContent=Math.round(avg)+'%';
+    }
+  }).catch(function(){});
+  api('GET','/demo/stats').then(function(r){
+    if(r.status===200&&r.data&&r.data.null_rates){
+      var vals=Object.keys(r.data.null_rates).map(function(k){return r.data.null_rates[k];});
+      var avg=vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:0;
+      document.getElementById('liveNullRate').textContent=Math.round(avg*100)+'%';
+    }
+  }).catch(function(){});
+  api('GET','/demo/sensors?limit=1').then(function(r){
+    if(r.status===200&&r.data&&typeof r.data.total==='number'){
+      var now=Date.now();
+      if(liveLastTotal!==null&&now>liveLastTs){
+        var rate=Math.max(0,Math.round((r.data.total-liveLastTotal)/((now-liveLastTs)/60000)));
+        document.getElementById('liveThroughput').textContent=rate;
+      }
+      liveLastTotal=r.data.total;liveLastTs=now;
+    }
+  }).catch(function(){});
+  document.getElementById('liveUpdated').textContent=new Date().toLocaleTimeString('ko-KR');
+}
+refreshLive();
+setInterval(refreshLive,5000);
+
 function toggle(h){var b=h.nextElementSibling,t=h.querySelector('.endpoint-toggle');b.classList.toggle('open');t.style.transform=b.classList.contains('open')?'rotate(180deg)':'';}
 function showResp(id,s,d,m){var b=document.getElementById(id),ok=s>=200&&s<300;b.className='response-box visible';b.innerHTML='<div class="response-header '+(ok?'success':'error')+'"><span class="status-code"></span><span>'+(ok?'Success':'Error')+'</span><span class="response-time"></span></div><div class="response-body-output"></div>';b.querySelector('.status-code').textContent=s;b.querySelector('.response-time').textContent=m+'ms';b.querySelector('.response-body-output').textContent=(typeof d==='string'?d:JSON.stringify(d,null,2));}
 function showLoad(id){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header loading"><span>Sending...</span></div>';}
