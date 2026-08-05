@@ -172,7 +172,7 @@ footer a:hover{text-decoration:underline}
   <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
     <button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button>
     <select id="autoInterval" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select>
-    <span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);">로봇 등록 + 아래 Playground의 API Key 입력 후 사용 가능</span>
+    <span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);white-space:nowrap;">대기 중</span>
     <div id="autoStats" style="display:none;padding:.4rem .9rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
       <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
         <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
@@ -261,7 +261,6 @@ footer a:hover{text-decoration:underline}
   ]
 }</textarea></div></div>
         <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button></div>
-        <p class="section-desc" style="margin:.5rem 0 0;font-size:.78rem;">Auto Mode는 상단 <strong>Live Snapshot</strong> 섹션으로 옮겼습니다.</p>
         <div class="response-box" id="resp-post-sensor"></div>
       </div></div>
     </div>
