@@ -169,12 +169,25 @@ footer a:hover{text-decoration:underline}
   <div class="section-label">Live Snapshot</div>
   <div class="section-title">실시간 현황</div>
   <p class="section-desc">위 아키텍처가 지금 실제로 돌아가는 상태입니다. <span id="liveUpdated">-</span> 기준, 5초마다 갱신됩니다.</p>
+  <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+    <button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button>
+    <select id="autoInterval" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select>
+    <span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);">로봇 등록 + 아래 Playground의 API Key 입력 후 사용 가능</span>
+    <div id="autoStats" style="display:none;padding:.4rem .9rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
+        <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
+        <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
+      </div>
+    </div>
+  </div>
   <div class="perf-grid">
     <div class="perf-card"><div class="value" id="liveActiveRobots">&#8211;</div><div class="label">활성 로봇 / 전체</div></div>
     <div class="perf-card"><div class="value" id="liveAvgBattery">&#8211;</div><div class="label">평균 배터리</div></div>
     <div class="perf-card"><div class="value" id="liveNullRate">&#8211;</div><div class="label">평균 Null Rate</div></div>
     <div class="perf-card"><div class="value" id="liveThroughput">&#8211;</div><div class="label">실시간 수집률 (건/분)</div></div>
   </div>
+  <p class="section-desc" style="font-size:.75rem;margin:.75rem 0 0;">&#8251; 수집률은 이 브라우저 세션 기준 분당 처리 건수입니다 &#8212; 아래 Performance 섹션의 Locust 부하테스트 TPS(초당·동시접속 500명 기준)와는 다른 지표입니다.</p>
 </section>
 <section class="section" id="playground">
   <div class="section-label">Interactive Playground</div>
@@ -247,15 +260,8 @@ footer a:hover{text-decoration:underline}
     {"sensor_type": "LiDAR", "data": {"distance": 3.5, "angle": 45}}
   ]
 }</textarea></div></div>
-        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button><button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button><span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);"></span></div>
-        <div id="autoStats" style="display:none;margin-top:.75rem;padding:.75rem 1rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
-          <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-            <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
-            <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
-            <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
-            <div>Interval: <select id="autoInterval" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:.15rem .4rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div>
-          </div>
-        </div>
+        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button></div>
+        <p class="section-desc" style="margin:.5rem 0 0;font-size:.78rem;">Auto Mode는 상단 <strong>Live Snapshot</strong> 섹션으로 옮겼습니다.</p>
         <div class="response-box" id="resp-post-sensor"></div>
       </div></div>
     </div>
@@ -367,6 +373,7 @@ function showTpsTip(el,p){
 renderTpsChart();
 
 var liveLastTotal=null,liveLastTs=null;
+var robotStateMap={};
 function refreshLive(){
   api('GET','/demo/robots').then(function(r){
     if(r.status===200&&Array.isArray(r.data)&&r.data.length){
@@ -374,6 +381,7 @@ function refreshLive(){
       document.getElementById('liveActiveRobots').textContent=active+' / '+r.data.length;
       var avg=r.data.reduce(function(s,x){return s+x.battery_level;},0)/r.data.length;
       document.getElementById('liveAvgBattery').textContent=Math.round(avg)+'%';
+      r.data.forEach(function(x){robotStateMap[x.id]={status:x.status,battery_level:x.battery_level};});
     }
   }).catch(function(){});
   api('GET','/demo/stats').then(function(r){
@@ -482,10 +490,19 @@ function stopAuto(){
   document.getElementById('autoBtn').className='btn btn-sm btn-green';
   document.getElementById('autoStatus').textContent='Stopped ('+autoSentN+' sent)';
 }
+var autoTickCount=0;
 function sendAutoTick(){
   var rid=R[Math.floor(Math.random()*R.length)].id;
   var data=genSensorData(rid);
   document.getElementById('sensor-body').value=JSON.stringify(data,null,2);
+  autoTickCount++;
+  if(autoTickCount%5===0&&robotStateMap[rid]){
+    var cur=robotStateMap[rid];
+    var newBattery=Math.max(0,cur.battery_level-(1+Math.floor(Math.random()*3)));
+    api('PUT','/api/robots/'+rid,{status:cur.status,battery_level:newBattery}).then(function(r){
+      if(r.status>=200&&r.status<300)robotStateMap[rid].battery_level=newBattery;
+    }).catch(function(){});
+  }
   api('POST','/api/sensors',data).then(function(r){
     autoSentN++;
     if(r.status>=200&&r.status<300){autoTotalMs+=r.ms;}else{autoErrN++;}
