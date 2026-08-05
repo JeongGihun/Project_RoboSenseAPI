@@ -1,5 +1,7 @@
 # RoboSense API
 
+**배포 주소**: http://3.39.87.132
+
 ## 부제
 ```
 High-Performance Sensor Data Processing API for Robotics
@@ -20,14 +22,15 @@ Python과 C++ 병합
    * FastAPI 5개 + Nginx + Docker
 - '26. 01. 18 ~ '26. 01. 25 : 복합 인덱스 추가, N+1문제 해결, 최적화 여부 확인 [TPS : 653]
 - '26. 01. 25 ~ '26. 02. 01 : 쿼리 최적화, 캐시워밍, Bulk insert 도입, 배치 간격 최적화 [TPS : 1,001]
-- '26. 02. 01 ~ '26. 02. 08 : C++ 모듈 도입 (센서 데이터, stats) [TPS : 1,001]
+- '26. 02. 01 ~ '26. 02. 08 : C++ 모듈 도입 (센서 데이터, stats) [TPS : 1,010]
 - '26. 02. 09 ~ '26. 02. 17 : C++ 모듈 도입 (filtered), C++과 Python 연산 속도 비교
 - '26. 02. 27 : 워커 병렬 도입 (2개)
 - '26. 02. 28 : keepalive 설정
-- '26. 02. 28 ~ '26. 03. 06 : 워커 병렬 실행, asyncpg 도입 [TPS : 1,010]
+- '26. 02. 28 ~ '26. 03. 06 : 워커 병렬 실행, asyncpg 도입 [TPS : 1,069]
 - '26. 03. 07 ~ '26. 03. 14 : read_replica + synchronous_commit 도입 -> TPS 오히려 하락해서 제거
 - '26. 03. 15 : AWS EC2 배포 최초 성공
 - '26. 03. 22 : 인터랙티브 API 랜딩페이지 배포, 데이터 초기화 엔드포인트 추가
+- '26. 05. 23 : Cursor -> Offset 페이지네이션으로 전환
 
 ## 주요 기능
 
@@ -96,9 +99,12 @@ RobosenseAPI/
 │   ├── main.py                 # FastAPI 앱 (랜딩페이지 서빙 포함)
 │   ├── database.py             # DB 연결 및 세션 관리
 │   ├── redis_client.py         # Redis 클라이언트
-│   ├── context.py              # 컨텍스트 관리
-│   ├── middleware.py            # 미들웨어
-│   ├── logging_config.py        # 로깅 설정
+│   ├── auth.py                 # API Key 생성 및 검증
+│   ├── context.py              # ContextVar 기반 request_id 관리
+│   ├── exceptions.py           # 커스텀 예외 클래스
+│   ├── metrics.py              # 요청 지표 수집
+│   ├── middleware.py           # Request ID 주입, 응답시간 측정
+│   ├── logging_config.py       # request_id 로그 필터
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── db_models.py        # SQLAlchemy ORM 모델
@@ -107,9 +113,11 @@ RobosenseAPI/
 │   │   └── enum.py             # Enum 타입 정의
 │   ├── routes/
 │   │   ├── __init__.py
-│   │   ├── sensor_routes.py    # 센서 데이터 API
+│   │   ├── sensor_routes.py    # 센서 데이터 API + 배치 워커
 │   │   ├── robot_routes.py     # 로봇 관리 API
-│   │   └── stats_routes.py     # 통계 API
+│   │   ├── stats_routes.py     # 통계 API
+│   │   ├── admin_routes.py     # API Key 발급/폐기 (관리자 전용)
+│   │   └── demo_routes.py      # 랜딩페이지 공개 조회 (인증 불필요)
 │   └── utils/
 │       └── retry.py            # 재시도 유틸리티
 ├── cpp_modules/                # C++ 연산 모듈

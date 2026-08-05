@@ -1,5 +1,5 @@
 """센서 데이터 API 테스트 (D1-D2)"""
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from app.models.db_models import Robot, SensorData
 
@@ -131,7 +131,7 @@ async def test_get_sensors_limit_zero(client):
 
 
 async def test_get_sensors_pagination(client, db_session):
-    """커서 기반 페이지네이션"""
+    """offset 기반 페이지네이션"""
     robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
     db_session.add(robot)
     await db_session.commit()
@@ -144,15 +144,15 @@ async def test_get_sensors_pagination(client, db_session):
     await db_session.commit()
 
     # 첫 페이지 (limit=2)
-    resp1 = await client.get("/api/sensors?limit=2")
+    resp1 = await client.get("/api/sensors?limit=2&page=1")
     assert resp1.status_code == 200
     d1 = resp1.json()
     assert len(d1["data"]) == 2
     assert d1["has_more"] is True
-    assert d1["next_cursor"] is not None
+    assert d1["total"] == 5
 
     # 두 번째 페이지
-    resp2 = await client.get(f"/api/sensors?limit=2&cursor_id={d1['next_cursor']}")
+    resp2 = await client.get("/api/sensors?limit=2&page=2")
     assert resp2.status_code == 200
     d2 = resp2.json()
     assert len(d2["data"]) == 2
@@ -160,6 +160,53 @@ async def test_get_sensors_pagination(client, db_session):
     ids1 = {s["id"] for s in d1["data"]}
     ids2 = {s["id"] for s in d2["data"]}
     assert ids1.isdisjoint(ids2)
+
+
+async def test_get_sensors_filter_start_time(client, db_session):
+    """start_time 이후 데이터만 조회"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    old_time = datetime.now(timezone.utc) - timedelta(hours=2)
+    new_time = datetime.now(timezone.utc)
+
+    s1 = SensorData(robot_id=robot.id, sensor_type="IMU", timestamp=old_time)
+    s2 = SensorData(robot_id=robot.id, sensor_type="IMU", timestamp=new_time)
+    db_session.add_all([s1, s2])
+    await db_session.commit()
+
+    start = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M:%S')
+    response = await client.get(f"/api/sensors?start_time={start}")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 1
+    assert data["data"][0]["id"] == s2.id
+
+
+async def test_get_sensors_filter_time_range(client, db_session):
+    """start_time ~ end_time 범위 데이터 조회"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    t1 = datetime.now(timezone.utc) - timedelta(hours=3)
+    t2 = datetime.now(timezone.utc) - timedelta(hours=1)
+    t3 = datetime.now(timezone.utc)
+
+    s1 = SensorData(robot_id=robot.id, sensor_type="GPS", timestamp=t1)
+    s2 = SensorData(robot_id=robot.id, sensor_type="GPS", timestamp=t2)
+    s3 = SensorData(robot_id=robot.id, sensor_type="GPS", timestamp=t3)
+    db_session.add_all([s1, s2, s3])
+    await db_session.commit()
+
+    start = (datetime.now(timezone.utc) - timedelta(hours=2)).strftime('%Y-%m-%dT%H:%M:%S')
+    end = (datetime.now(timezone.utc) - timedelta(minutes=30)).strftime('%Y-%m-%dT%H:%M:%S')
+    response = await client.get(f"/api/sensors?start_time={start}&end_time={end}")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 1
+    assert data["data"][0]["id"] == s2.id
 
 
 # === GET /api/sensors/{id} ===
@@ -189,3 +236,58 @@ async def test_get_sensor_by_id_not_found(client):
     """존재하지 않는 센서 ID → 404"""
     response = await client.get("/api/sensors/99999")
     assert response.status_code == 404
+
+
+# === GET /api/sensors/filtered ===
+
+async def test_get_filtered_sensor_no_data(client, db_session):
+    """Redis에 데이터 없을 때 빈 결과 반환"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    response = await client.get(
+        f"/api/sensors/filtered?robot_id={robot.id}&sensor_type=IMU&field=mocked&window_size=2"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["original_data"] == []
+    assert data["filtered_data"] == []
+    assert data["robot_id"] == robot.id
+    assert data["sensor_type"] == "IMU"
+
+
+async def test_get_filtered_sensor_with_data(client, db_session):
+    """Redis에 센서 데이터 있을 때 필터링 결과 반환"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.commit()
+
+    await client.post("/api/sensors", json={
+        "robot_id": robot.id,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "sensors": [
+            {"sensor_type": "IMU", "data": {
+                "acceleration": {"x": 1.0, "y": 2.0, "z": 3.0},
+                "gyroscope": {"x": 0.1, "y": 0.2, "z": 0.3}
+            }}
+        ]
+    })
+
+    response = await client.get(
+        f"/api/sensors/filtered?robot_id={robot.id}&sensor_type=IMU&field=mocked&window_size=2"
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["robot_id"] == robot.id
+    assert data["sensor_type"] == "IMU"
+    assert data["field"] == "mocked"
+    assert data["window_size"] == 2
+    assert "original_data" in data
+    assert "filtered_data" in data
+
+
+async def test_get_filtered_sensor_missing_params(client):
+    """필수 파라미터 누락 시 422"""
+    response = await client.get("/api/sensors/filtered?robot_id=1")
+    assert response.status_code == 422

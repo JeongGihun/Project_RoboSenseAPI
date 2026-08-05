@@ -117,6 +117,10 @@ body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var
 .perf-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1.5rem;text-align:center}
 .perf-card .value{font-size:2.2rem;font-weight:800;background:linear-gradient(135deg,var(--accent-light),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .perf-card .label{font-size:.85rem;color:var(--text-muted);margin-top:.25rem}
+.tps-chart-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:2rem 1.5rem 1rem;margin-top:1.5rem}
+.tps-dot{cursor:pointer}
+.tps-tooltip{position:absolute;display:none;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:.6rem .8rem;font-size:.78rem;line-height:1.5;max-width:240px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:20;pointer-events:none}
+.tps-tooltip strong{color:var(--accent-light)}
 .robot-list{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.5rem}
 .robot-chip{display:inline-flex;align-items:center;gap:.4rem;padding:.3rem .8rem;background:var(--surface2);border:1px solid var(--border);border-radius:100px;font-size:.78rem}
 .robot-chip .chip-id{color:var(--accent-light);font-weight:600;font-family:'Courier New',monospace}
@@ -133,8 +137,14 @@ footer a:hover{text-decoration:underline}
   <h1>RoboSense API</h1>
   <p>물류 창고 자율주행 로봇을 위한 고성능 센서 데이터 처리 API.<br>실시간 수집 &#183; C++ 최적화 &#183; Redis 캐싱 &#183; 비동기 배치 처리</p>
   <div class="server-status" id="serverStatus"><span class="status-dot checking" id="statusDot"></span><span id="statusText">서버 상태 확인 중...</span></div>
+  <div style="display:flex;gap:.5rem;align-items:center;justify-content:center;margin-top:.75rem;flex-wrap:wrap;">
+    <input type="text" id="apiKeyInput" placeholder="API Key (선택, 쓰기 테스트용)" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;color:var(--text);font-size:.78rem;font-family:'Courier New',monospace;width:220px;outline:none">
+    <button class="btn btn-sm btn-outline" onclick="applyApiKey()">적용</button>
+    <span id="apiKeyStatus" style="font-size:.78rem;color:var(--text-dim);">미설정</span>
+  </div>
   <div class="hero-actions">
     <a href="#playground" class="btn btn-primary">API 테스트하기 &#8595;</a>
+    <a href="#quicktest" class="btn btn-outline">간단 테스트 &#8595;</a>
     <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank" class="btn btn-outline">GitHub &#8599;</a>
   </div>
 </section>
@@ -161,12 +171,36 @@ footer a:hover{text-decoration:underline}
     <div class="tech-card"><h4>Locust</h4><p>점진적 부하 테스트 (100 &#8594; 5,000 동시 접속)</p></div>
   </div>
 </section>
+<section class="section">
+  <div class="section-label">Live Snapshot</div>
+  <div class="section-title">실시간 현황</div>
+  <p class="section-desc">위 아키텍처가 지금 실제로 돌아가는 상태입니다. <span id="liveUpdated">-</span> 기준, 5초마다 갱신됩니다.</p>
+  <div id="quicktest" style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;scroll-margin-top:1.5rem;">
+    <button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button>
+    <select id="autoInterval" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select>
+    <span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);white-space:nowrap;">대기 중</span>
+    <div id="autoStats" style="display:none;padding:.4rem .9rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
+      <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
+        <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
+        <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
+      </div>
+    </div>
+  </div>
+  <div class="perf-grid">
+    <div class="perf-card"><div class="value" id="liveActiveRobots">&#8211;</div><div class="label">활성 로봇 / 전체</div></div>
+    <div class="perf-card"><div class="value" id="liveAvgBattery">&#8211;</div><div class="label">평균 배터리</div></div>
+    <div class="perf-card"><div class="value" id="liveNullRate">&#8211;</div><div class="label">평균 Null Rate</div></div>
+    <div class="perf-card"><div class="value" id="liveThroughput">&#8211;</div><div class="label">실시간 수집률 (건/분)</div></div>
+  </div>
+  <p class="section-desc" style="font-size:.75rem;margin:.75rem 0 0;">&#8251; 수집률은 이 브라우저 세션 기준 분당 처리 건수입니다 &#8212; 아래 Performance 섹션의 Locust 부하테스트 TPS(초당·동시접속 500명 기준)와는 다른 지표입니다.</p>
+</section>
 <section class="section" id="playground">
   <div class="section-label">Interactive Playground</div>
   <div class="section-title">API 테스트</div>
   <p class="section-desc">실제 서버에 요청을 보내고 응답을 확인하세요. 모든 기능은 로봇 등록 후 사용할 수 있습니다.</p>
   <div class="flow-banner"><div class="icon">&#9888;</div><div><strong>Step 1 필수</strong> &#8212; 센서 데이터 수집, 필터링, 통계 등 모든 기능은 <strong>로봇 등록(POST /api/robots)</strong> 이후에만 사용할 수 있습니다.</div></div>
-  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25)"><div class="icon">&#128274;</div><div><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 버튼 클릭 시 401이 정상 응답입니다.</div></div>
+  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25)"><div class="icon">&#128274;</div><div><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 페이지 맨 위에서 API Key를 적용하세요. 키 없이 버튼 클릭 시 401이 정상 응답입니다.</div></div>
   <div class="flow-steps">
     <div class="flow-step"><div class="flow-step-num">1</div><h4>로봇 등록</h4><p>POST /api/robots</p></div><div class="flow-connector">&#8594;</div>
     <div class="flow-step"><div class="flow-step-num">2</div><h4>센서 데이터 수집</h4><p>POST /api/sensors</p></div><div class="flow-connector">&#8594;</div>
@@ -225,15 +259,7 @@ footer a:hover{text-decoration:underline}
     {"sensor_type": "LiDAR", "data": {"distance": 3.5, "angle": 45}}
   ]
 }</textarea></div></div>
-        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button><button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button><span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);"></span></div>
-        <div id="autoStats" style="display:none;margin-top:.75rem;padding:.75rem 1rem;background:var(--surface2);border-radius:8px;font-size:.8rem;">
-          <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-            <div>Sent: <strong id="autoSent" style="color:var(--green)">0</strong></div>
-            <div>Errors: <strong id="autoErrors" style="color:var(--red)">0</strong></div>
-            <div>Avg: <strong id="autoAvg" style="color:var(--accent-light)">0ms</strong></div>
-            <div>Interval: <select id="autoInterval" style="background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:.15rem .4rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select></div>
-          </div>
-        </div>
+        <div class="form-actions"><button class="btn btn-sm btn-primary" onclick="postSensor()">Send Request</button><button class="btn btn-sm btn-outline" onclick="fillSample()">Sample Data</button></div>
         <div class="response-box" id="resp-post-sensor"></div>
       </div></div>
     </div>
@@ -285,20 +311,136 @@ footer a:hover{text-decoration:underline}
     <div class="perf-card"><div class="value">Cache</div><div class="label">Redis Cache-Aside<br>TTL 10s~60s 자동 갱신</div></div>
     <div class="perf-card"><div class="value">GZip</div><div class="label">응답 압축 미들웨어<br>1KB 이상 자동 압축</div></div>
   </div>
+  <div style="margin-top:3rem;">
+    <div class="section-label">Load Test Journal</div>
+    <div class="section-title">TPS 변화 기록</div>
+    <p class="section-desc" style="margin-bottom:1rem;">Locust 부하 테스트로 측정한 TPS 변화. 모든 변경이 상승으로 이어지진 않았습니다 &#8212; 포인트에 마우스를 올려보세요.</p>
+  </div>
+  <div class="tps-chart-wrap"><div id="tpsChart"></div></div>
+  <div class="tps-tooltip" id="tpsTooltip"></div>
 </section>
 <footer><p>Built by <strong>JeongGihun</strong> &#183; <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank">GitHub</a></p></footer>
 <script>
 var B=location.origin,R=[];
 function checkServer(){var d=document.getElementById('statusDot'),t=document.getElementById('statusText');fetch(B+'/health_check').then(function(r){if(r.ok){d.className='status-dot online';t.textContent='Server Online';}else{d.className='status-dot offline';t.textContent='Unhealthy';}}).catch(function(){d.className='status-dot offline';t.textContent='Server Offline';});}
 checkServer();
+
+var TPS_JOURNAL=[
+  {week:'Week 10',date:"'26.01.04",tps:26,note:'베이스라인. 커넥션풀·쿼리는 다 확인했지만 병목 지점을 못 찾은 상태'},
+  {week:'Week 12',date:"'26.01.18",tps:489,note:'Redis 캐시 + Cursor 페이지네이션 + Docker 5-replica 도입'},
+  {week:'Week 15',date:"'26.02.08",tps:1001,note:'C++ pybind11 모듈 도입. py-spy 분석: PostgreSQL이 병목 98%(CPU 600%)'},
+  {week:"'26.02~03",date:"'26.03.06",tps:1069,note:'asyncpg 도입 + 워커 병렬화'},
+  {week:'Week 19',date:"'26.03.15",tps:927,note:'read_replica + synchronous_commit 도입 → read 비중이 17%뿐이라 오버헤드만 커져 하락, 롤백'}
+];
+function renderTpsChart(){
+  var w=1000,h=280,padL=30,padR=20,padT=30,padB=40;
+  var maxTps=Math.max.apply(null,TPS_JOURNAL.map(function(p){return p.tps;}))*1.15;
+  var stepX=(w-padL-padR)/(TPS_JOURNAL.length-1);
+  var coords=TPS_JOURNAL.map(function(p,i){
+    return {x:padL+i*stepX,y:h-padB-(p.tps/maxTps)*(h-padT-padB),p:p};
+  });
+  var svg='<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:auto;overflow:visible">';
+  svg+='<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--border)"/>';
+  for(var i=1;i<coords.length;i++){
+    var down=coords[i].p.tps<coords[i-1].p.tps;
+    svg+='<line x1="'+coords[i-1].x+'" y1="'+coords[i-1].y+'" x2="'+coords[i].x+'" y2="'+coords[i].y+'" stroke="'+(down?'var(--red)':'var(--accent-light)')+'" stroke-width="2.5"'+(down?' stroke-dasharray="6,4"':'')+'/>';
+  }
+  coords.forEach(function(c,i){
+    var down=i>0&&c.p.tps<coords[i-1].p.tps;
+    var col=down?'var(--red)':'var(--accent-light)';
+    svg+='<circle class="tps-dot" data-i="'+i+'" cx="'+c.x+'" cy="'+c.y+'" r="6" fill="'+col+'" stroke="var(--bg)" stroke-width="2"/>';
+    svg+='<text x="'+c.x+'" y="'+(c.y-14)+'" text-anchor="middle" font-size="13" font-weight="700" fill="'+col+'">'+c.p.tps.toLocaleString()+'</text>';
+    svg+='<text x="'+c.x+'" y="'+(h-padB+20)+'" text-anchor="middle" font-size="11" fill="var(--text-dim)">'+c.p.week+'</text>';
+  });
+  svg+='</svg>';
+  // TPS_JOURNAL은 하드코딩 상수(API 응답 아님) — innerHTML 사용해도 XSS 대상 아님
+  document.getElementById('tpsChart').innerHTML=svg;
+  document.querySelectorAll('.tps-dot').forEach(function(dot){
+    dot.addEventListener('mouseenter',function(e){showTpsTip(e.target,TPS_JOURNAL[+e.target.dataset.i]);});
+    dot.addEventListener('mouseleave',function(){document.getElementById('tpsTooltip').style.display='none';});
+  });
+}
+function showTpsTip(el,p){
+  var tip=document.getElementById('tpsTooltip');
+  tip.innerHTML='<strong>'+p.week+'</strong> ('+p.date+')<br>TPS '+p.tps.toLocaleString()+'<br>'+p.note;
+  tip.style.display='block';
+  var r=el.getBoundingClientRect();
+  tip.style.left=(r.left+window.scrollX-tip.offsetWidth/2+6)+'px';
+  tip.style.top=(r.top+window.scrollY-tip.offsetHeight-10)+'px';
+}
+renderTpsChart();
+
+var liveLastTotal=null,liveLastTs=null;
+var robotStateMap={};
+function refreshLive(){
+  api('GET','/demo/robots').then(function(r){
+    if(r.status===200&&Array.isArray(r.data)&&r.data.length){
+      var active=r.data.filter(function(x){return x.status==='active';}).length;
+      document.getElementById('liveActiveRobots').textContent=active+' / '+r.data.length;
+      var avg=r.data.reduce(function(s,x){return s+x.battery_level;},0)/r.data.length;
+      document.getElementById('liveAvgBattery').textContent=Math.round(avg)+'%';
+      r.data.forEach(function(x){robotStateMap[x.id]={status:x.status,battery_level:x.battery_level};});
+    }
+  }).catch(function(){});
+  api('GET','/demo/stats').then(function(r){
+    if(r.status===200&&r.data&&r.data.null_rates){
+      var vals=Object.keys(r.data.null_rates).map(function(k){return r.data.null_rates[k];});
+      var avg=vals.length?vals.reduce(function(a,b){return a+b;},0)/vals.length:0;
+      document.getElementById('liveNullRate').textContent=Math.round(avg*100)+'%';
+    }
+  }).catch(function(){});
+  api('GET','/demo/sensors?limit=1').then(function(r){
+    if(r.status===200&&r.data&&typeof r.data.total==='number'){
+      var now=Date.now();
+      if(liveLastTotal!==null&&now>liveLastTs){
+        var rate=Math.max(0,Math.round((r.data.total-liveLastTotal)/((now-liveLastTs)/60000)));
+        document.getElementById('liveThroughput').textContent=rate;
+      }
+      liveLastTotal=r.data.total;liveLastTs=now;
+    }
+  }).catch(function(){});
+  document.getElementById('liveUpdated').textContent=new Date().toLocaleTimeString('ko-KR');
+}
+refreshLive();
+setInterval(refreshLive,5000);
+
 function toggle(h){var b=h.nextElementSibling,t=h.querySelector('.endpoint-toggle');b.classList.toggle('open');t.style.transform=b.classList.contains('open')?'rotate(180deg)':'';}
-function showResp(id,s,d,m){var b=document.getElementById(id),ok=s>=200&&s<300;b.className='response-box visible';b.innerHTML='<div class="response-header '+(ok?'success':'error')+'"><span class="status-code">'+s+'</span><span>'+(ok?'Success':'Error')+'</span><span class="response-time">'+m+'ms</span></div><div class="response-body-output">'+(typeof d==='string'?d:JSON.stringify(d,null,2))+'</div>';}
+function showResp(id,s,d,m){var b=document.getElementById(id),ok=s>=200&&s<300;b.className='response-box visible';b.innerHTML='<div class="response-header '+(ok?'success':'error')+'"><span class="status-code"></span><span>'+(ok?'Success':'Error')+'</span><span class="response-time"></span></div><div class="response-body-output"></div>';b.querySelector('.status-code').textContent=s;b.querySelector('.response-time').textContent=m+'ms';b.querySelector('.response-body-output').textContent=(typeof d==='string'?d:JSON.stringify(d,null,2));}
 function showLoad(id){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header loading"><span>Sending...</span></div>';}
-function showErr(id,m){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header error"><span>Error</span></div><div class="response-body-output">'+m+'</div>';}
-function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
+function showErr(id,m){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header error"><span>Error</span></div><div class="response-body-output"></div>';b.querySelector('.response-body-output').textContent=m;}
+var apiKey='';
+function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(apiKey)o.headers['X-API-Key']=apiKey;if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
+function applyApiKey(){
+  var candidate=document.getElementById('apiKeyInput').value.trim();
+  var statusEl=document.getElementById('apiKeyStatus');
+  var prev=apiKey;
+  if(!candidate){
+    apiKey='';
+    statusEl.textContent='미설정';
+    statusEl.style.color='var(--text-dim)';
+    return;
+  }
+  statusEl.textContent='확인 중...';
+  statusEl.style.color='var(--text-dim)';
+  apiKey=candidate;
+  api('GET','/api/robots').then(function(r){
+    if(r.status===200){
+      statusEl.textContent='적용됨';
+      statusEl.style.color='var(--green)';
+    }else{
+      apiKey=prev;
+      statusEl.textContent='키 오류 — 적용 안 됨';
+      statusEl.style.color='var(--red)';
+    }
+  }).catch(function(){
+    apiKey=prev;
+    statusEl.textContent='확인 실패';
+    statusEl.style.color='var(--red)';
+  });
+}
 function unlock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.add('unlocked');});}
 function lock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.remove('unlocked');});}
-function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML=R.map(function(r){return'<div class="robot-chip"><span class="chip-id">#'+r.id+'</span><span class="chip-name">'+r.name+'</span></div>';}).join('');}
+function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML='';R.forEach(function(r){var chip=document.createElement('div');chip.className='robot-chip';var idSpan=document.createElement('span');idSpan.className='chip-id';idSpan.textContent='#'+r.id;var nameSpan=document.createElement('span');nameSpan.className='chip-name';nameSpan.textContent=r.name;chip.appendChild(idSpan);chip.appendChild(nameSpan);el.appendChild(chip);});}
 var MODELS=['Warehouse-Bot-v2','Patrol-Bot-X1','Cargo-Mover-3K','Scout-Mini','HeavyLift-900','SpeedRunner-S','Inspector-Pro','CleanBot-Z','Picker-Alpha','Navigator-V5'];
 var autoTimer=null,autoSentN=0,autoErrN=0,autoTotalMs=0;
 
@@ -363,16 +505,31 @@ function toggleAuto(){
   sendAutoTick();
   autoTimer=setInterval(sendAutoTick,parseInt(document.getElementById('autoInterval').value)||1000);
 }
+document.getElementById('autoInterval').addEventListener('change',function(){
+  if(autoTimer){
+    clearInterval(autoTimer);
+    autoTimer=setInterval(sendAutoTick,parseInt(this.value)||1000);
+  }
+});
 function stopAuto(){
   clearInterval(autoTimer);autoTimer=null;
   document.getElementById('autoBtn').innerHTML='&#9654; Auto Mode';
   document.getElementById('autoBtn').className='btn btn-sm btn-green';
   document.getElementById('autoStatus').textContent='Stopped ('+autoSentN+' sent)';
 }
+var autoTickCount=0;
 function sendAutoTick(){
   var rid=R[Math.floor(Math.random()*R.length)].id;
   var data=genSensorData(rid);
   document.getElementById('sensor-body').value=JSON.stringify(data,null,2);
+  autoTickCount++;
+  if(autoTickCount%5===0&&robotStateMap[rid]){
+    var cur=robotStateMap[rid];
+    var newBattery=Math.max(0,cur.battery_level-(1+Math.floor(Math.random()*3)));
+    api('PUT','/api/robots/'+rid,{status:cur.status,battery_level:newBattery}).then(function(r){
+      if(r.status>=200&&r.status<300)robotStateMap[rid].battery_level=newBattery;
+    }).catch(function(){});
+  }
   api('POST','/api/sensors',data).then(function(r){
     autoSentN++;
     if(r.status>=200&&r.status<300){autoTotalMs+=r.ms;}else{autoErrN++;}

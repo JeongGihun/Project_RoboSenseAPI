@@ -25,6 +25,10 @@ RUN cd /app/cpp_modules/sensor_cpp && \
 # 애플리케이션 복사
 COPY . .
 
+# 일반 유저 생성 및 소유권 이전
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
 # 포트 노출
 EXPOSE 8000
 

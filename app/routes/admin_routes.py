@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 
 from app.database import get_db
 from app.models.db_models import ApiKey
@@ -9,14 +11,18 @@ from app.auth import generate_api_key, verify_admin_key
 router = APIRouter(prefix="/admin", tags=["관리"])
 
 
+class ApiKeyCreate(BaseModel):
+    robot_id: Optional[int] = None
+
+
 @router.post("/api-keys", status_code=status.HTTP_201_CREATED)
 async def issue_api_key(
-    body: dict = None,
+    body: ApiKeyCreate = ApiKeyCreate(),
     admin_key: str = Depends(verify_admin_key),
     db: AsyncSession = Depends(get_db),
 ):
     """API Key 발급. 평문 키는 이 응답에서만 확인 가능."""
-    robot_id = body.get("robot_id") if body else None
+    robot_id = body.robot_id
     plain_key, salt, key_hash = generate_api_key()
 
     api_key = ApiKey(key_hash=key_hash, salt=salt, robot_id=robot_id)

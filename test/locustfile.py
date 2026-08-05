@@ -1,7 +1,10 @@
 from locust import HttpUser, task, constant
 import random
 import time
+import os
 from datetime import datetime
+
+API_KEY = os.getenv("LOCUST_API_KEY", "8_pE3-Gxz788YhXeX7lZUKt9W4AH9wVe6LZFCuq-f10")
 
 def generate_sensor_payload(robot_id, timestamp) :
     """페이로드 생성"""
@@ -56,6 +59,7 @@ class User(HttpUser) :
 
     def on_start(self) :
         """시작 시 로봇 ID 할당"""
+        self.client.headers.update({"X-API-Key": API_KEY})
         self.robot_id = random.randint(1, 10)
 
     @task(100)

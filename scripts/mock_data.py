@@ -4,8 +4,11 @@ from datetime import datetime, timedelta
 import time
 
 BASE_URL = "http://localhost:8000"
+API_KEY = ""          # 발급받은 API Key 입력 (POST /api/robots, /api/sensors 필요)
 TOTAL_ROBOT = 10
 TOTAL_REQUESTS = 1000
+
+HEADERS = {"X-API-Key": API_KEY} if API_KEY else {}
 
 def create_robot() :
     """로봇 10대 생성"""
@@ -21,7 +24,8 @@ def create_robot() :
 
         response = requests.post(
             f"{BASE_URL}/api/robots",
-            json = robot_data
+            json = robot_data,
+            headers = HEADERS,
         )
 
         if response.status_code == 201 :
@@ -96,6 +100,7 @@ def create_sensor_data() :
                 response = requests.post(
                     f"{BASE_URL}/api/sensors",
                     json=payload,
+                    headers=HEADERS,
                     timeout=5
                 )
 

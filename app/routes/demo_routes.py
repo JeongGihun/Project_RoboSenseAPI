@@ -38,14 +38,16 @@ async def demo_get_robot(id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/sensors", response_model=SensorListResponse)
 async def demo_list_sensors(
     limit: int = Query(100, ge=1, le=1000),
+    page: int = Query(1, ge=1),
     robot_id: Optional[int] = None,
     sensor_type: Optional[str] = None,
-    cursor_id: Optional[int] = None,
+    start_time: Optional[datetime] = None,
+    end_time: Optional[datetime] = None,
     db: AsyncSession = Depends(get_db),
 ):
     return await sensor_routes.check_filter_data(
-        limit=limit, robot_id=robot_id, sensor_type=sensor_type,
-        cursor_id=cursor_id, db=db, _key=None,
+        limit=limit, page=page, robot_id=robot_id, sensor_type=sensor_type,
+        start_time=start_time, end_time=end_time, db=db, _key=None,
     )
 
 
