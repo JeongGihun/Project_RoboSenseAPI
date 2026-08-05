@@ -137,8 +137,14 @@ footer a:hover{text-decoration:underline}
   <h1>RoboSense API</h1>
   <p>물류 창고 자율주행 로봇을 위한 고성능 센서 데이터 처리 API.<br>실시간 수집 &#183; C++ 최적화 &#183; Redis 캐싱 &#183; 비동기 배치 처리</p>
   <div class="server-status" id="serverStatus"><span class="status-dot checking" id="statusDot"></span><span id="statusText">서버 상태 확인 중...</span></div>
+  <div style="display:flex;gap:.5rem;align-items:center;justify-content:center;margin-top:.75rem;flex-wrap:wrap;">
+    <input type="text" id="apiKeyInput" placeholder="API Key (선택, 쓰기 테스트용)" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;color:var(--text);font-size:.78rem;font-family:'Courier New',monospace;width:220px;outline:none">
+    <button class="btn btn-sm btn-outline" onclick="applyApiKey()">적용</button>
+    <span id="apiKeyStatus" style="font-size:.78rem;color:var(--text-dim);">미설정</span>
+  </div>
   <div class="hero-actions">
     <a href="#playground" class="btn btn-primary">API 테스트하기 &#8595;</a>
+    <a href="#quicktest" class="btn btn-outline">간단 테스트 &#8595;</a>
     <a href="https://github.com/JeongGihun/Project_RoboSenseAPI" target="_blank" class="btn btn-outline">GitHub &#8599;</a>
   </div>
 </section>
@@ -169,7 +175,7 @@ footer a:hover{text-decoration:underline}
   <div class="section-label">Live Snapshot</div>
   <div class="section-title">실시간 현황</div>
   <p class="section-desc">위 아키텍처가 지금 실제로 돌아가는 상태입니다. <span id="liveUpdated">-</span> 기준, 5초마다 갱신됩니다.</p>
-  <div style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+  <div id="quicktest" style="display:flex;gap:.75rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;scroll-margin-top:1.5rem;">
     <button class="btn btn-sm btn-green" id="autoBtn" onclick="toggleAuto()">&#9654; Auto Mode</button>
     <select id="autoInterval" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:.4rem .6rem;font-size:.78rem;"><option value="100" selected>0.1s</option><option value="500">0.5s</option><option value="1000">1s</option><option value="2000">2s</option><option value="5000">5s</option></select>
     <span id="autoStatus" style="font-size:.78rem;color:var(--text-dim);white-space:nowrap;">대기 중</span>
@@ -194,14 +200,7 @@ footer a:hover{text-decoration:underline}
   <div class="section-title">API 테스트</div>
   <p class="section-desc">실제 서버에 요청을 보내고 응답을 확인하세요. 모든 기능은 로봇 등록 후 사용할 수 있습니다.</p>
   <div class="flow-banner"><div class="icon">&#9888;</div><div><strong>Step 1 필수</strong> &#8212; 센서 데이터 수집, 필터링, 통계 등 모든 기능은 <strong>로봇 등록(POST /api/robots)</strong> 이후에만 사용할 수 있습니다.</div></div>
-  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25);flex-wrap:wrap">
-    <div class="icon">&#128274;</div>
-    <div style="flex:1;min-width:240px"><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 키 없이 버튼 클릭 시 401이 정상 응답입니다.</div>
-    <div style="display:flex;gap:.5rem;align-items:center">
-      <input type="text" id="apiKeyInput" placeholder="테스트용 API Key (선택)" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.4rem .7rem;color:var(--text);font-size:.78rem;font-family:'Courier New',monospace;width:200px;outline:none">
-      <span id="apiKeyStatus" style="font-size:.72rem;color:var(--text-dim)">미설정</span>
-    </div>
-  </div>
+  <div class="flow-banner" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(129,140,248,.08));border-color:rgba(99,102,241,.25)"><div class="icon">&#128274;</div><div><strong>인증 안내</strong> &#8212; <strong>조회(GET)</strong>는 공개 엔드포인트(<code>/demo/*</code>)로 키 없이 동작합니다. <strong>쓰기(POST/PUT/DELETE)</strong>는 <code>/api/*</code> + <code>X-API-Key</code> 헤더 필요 &#8212; 페이지 맨 위에서 API Key를 적용하세요. 키 없이 버튼 클릭 시 401이 정상 응답입니다.</div></div>
   <div class="flow-steps">
     <div class="flow-step"><div class="flow-step-num">1</div><h4>로봇 등록</h4><p>POST /api/robots</p></div><div class="flow-connector">&#8594;</div>
     <div class="flow-step"><div class="flow-step-num">2</div><h4>센서 데이터 수집</h4><p>POST /api/sensors</p></div><div class="flow-connector">&#8594;</div>
@@ -411,11 +410,34 @@ function showLoad(id){var b=document.getElementById(id);b.className='response-bo
 function showErr(id,m){var b=document.getElementById(id);b.className='response-box visible';b.innerHTML='<div class="response-header error"><span>Error</span></div><div class="response-body-output"></div>';b.querySelector('.response-body-output').textContent=m;}
 var apiKey='';
 function api(method,path,body){var s=performance.now(),o={method:method,headers:{'Content-Type':'application/json'}};if(apiKey)o.headers['X-API-Key']=apiKey;if(body)o.body=JSON.stringify(body);return fetch(B+path,o).then(function(r){var m=Math.round(performance.now()-s);return r.json().then(function(d){return{status:r.status,data:d,ms:m};}).catch(function(){return r.text().then(function(t){return{status:r.status,data:t,ms:m};});});});}
-document.getElementById('apiKeyInput').addEventListener('input',function(e){
-  apiKey=e.target.value.trim();
-  document.getElementById('apiKeyStatus').textContent=apiKey?'설정됨':'미설정';
-  document.getElementById('apiKeyStatus').style.color=apiKey?'var(--green)':'var(--text-dim)';
-});
+function applyApiKey(){
+  var candidate=document.getElementById('apiKeyInput').value.trim();
+  var statusEl=document.getElementById('apiKeyStatus');
+  var prev=apiKey;
+  if(!candidate){
+    apiKey='';
+    statusEl.textContent='미설정';
+    statusEl.style.color='var(--text-dim)';
+    return;
+  }
+  statusEl.textContent='확인 중...';
+  statusEl.style.color='var(--text-dim)';
+  apiKey=candidate;
+  api('GET','/api/robots').then(function(r){
+    if(r.status===200){
+      statusEl.textContent='적용됨';
+      statusEl.style.color='var(--green)';
+    }else{
+      apiKey=prev;
+      statusEl.textContent='키 오류 — 적용 안 됨';
+      statusEl.style.color='var(--red)';
+    }
+  }).catch(function(){
+    apiKey=prev;
+    statusEl.textContent='확인 실패';
+    statusEl.style.color='var(--red)';
+  });
+}
 function unlock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.add('unlocked');});}
 function lock(){['lock-post-sensor','lock-get-sensor','lock-filter-sensor','lock-stats'].forEach(function(id){document.getElementById(id).classList.remove('unlocked');});}
 function updateRL(){var el=document.getElementById('registeredRobots');if(!R.length){el.innerHTML='<span style="font-size:.8rem;color:var(--text-dim)">아직 등록된 로봇이 없습니다.</span>';return;}el.innerHTML='';R.forEach(function(r){var chip=document.createElement('div');chip.className='robot-chip';var idSpan=document.createElement('span');idSpan.className='chip-id';idSpan.textContent='#'+r.id;var nameSpan=document.createElement('span');nameSpan.className='chip-name';nameSpan.textContent=r.name;chip.appendChild(idSpan);chip.appendChild(nameSpan);el.appendChild(chip);});}
@@ -483,6 +505,12 @@ function toggleAuto(){
   sendAutoTick();
   autoTimer=setInterval(sendAutoTick,parseInt(document.getElementById('autoInterval').value)||1000);
 }
+document.getElementById('autoInterval').addEventListener('change',function(){
+  if(autoTimer){
+    clearInterval(autoTimer);
+    autoTimer=setInterval(sendAutoTick,parseInt(this.value)||1000);
+  }
+});
 function stopAuto(){
   clearInterval(autoTimer);autoTimer=null;
   document.getElementById('autoBtn').innerHTML='&#9654; Auto Mode';
