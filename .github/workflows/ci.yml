@@ -42,7 +42,7 @@ jobs:
         run: ruff check app/ test/
 
       - name: Test
-        run: pytest --cov=app --cov-report=term-missing -v
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=70 -v
         env:
           TEST_DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/test_db
           POSTGRES_HOST: localhost
