@@ -1,6 +1,13 @@
 """관리자 API Key 관리 테스트 (D3 TDD RED)"""
 import os
 
+from sqlalchemy import select, text as sql_text
+
+from app.models.db_models import Robot, SensorData
+from app.models.enum import SensorName
+from app.redis_client import get_redis
+from app.routes import robot_routes
+
 
 ADMIN_KEY = os.getenv("ADMIN_KEY", "test-admin-key")
 
@@ -116,19 +123,43 @@ async def test_revoke_nonexistent_key(client):
     assert response.status_code == 200
 
 
-async def test_reset_denies_regular_api_key(client):
-    """일반 API Key로 /api/reset 호출 → 401 (관리자 키 요구)"""
+async def test_reset_denies_regular_api_key(client, db_session):
+    """일반 API Key의 초기화 요청을 거부하고 기존 데이터를 보존"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.flush()
+    db_session.add(SensorData(robot_id=robot.id, sensor_type=SensorName.IMU))
+    await db_session.commit()
+    await get_redis().setex("robots:all", 60, "cached")
+
     response = await client.delete("/api/reset")
+
     assert response.status_code == 401
+    assert (await db_session.execute(select(Robot))).scalars().all()
+    assert (await db_session.execute(select(SensorData))).scalars().all()
+    assert await get_redis().get("robots:all") == "cached"
 
 
-async def test_reset_accepts_admin_key(client):
-    """관리자 키로 /api/reset 호출 → auth 통과 (401 아님)"""
+async def test_reset_accepts_admin_key(client, db_session, monkeypatch):
+    """관리자 Key의 초기화 요청이 DB와 Redis 데이터를 삭제"""
+    robot = Robot(name="Bot", model="v1", status="active", battery_level=80)
+    db_session.add(robot)
+    await db_session.flush()
+    db_session.add(SensorData(robot_id=robot.id, sensor_type=SensorName.IMU))
+    await db_session.commit()
+    await get_redis().setex("robots:all", 60, "cached")
+    monkeypatch.setattr(robot_routes, "text", lambda _: sql_text("SELECT 1"))
+
     response = await client.delete(
         "/api/reset",
         headers={"X-Admin-Key": ADMIN_KEY},
     )
-    assert response.status_code != 401
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"
+    assert (await db_session.execute(select(Robot))).scalars().all() == []
+    assert (await db_session.execute(select(SensorData))).scalars().all() == []
+    assert await get_redis().get("robots:all") is None
 
 
 async def test_issue_key_with_robot_id(client, db_session):
